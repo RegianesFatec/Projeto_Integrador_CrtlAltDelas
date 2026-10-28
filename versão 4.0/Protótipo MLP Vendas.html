@@ -1,0 +1,1833 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Protótipo MLP Vendas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: barra lateral verde-petróleo fixa + área de trabalho clara; no celular a barra vira gaveta.
+   Mesma paleta e fonte das duas telas iniciais (Login e Painel). Estado e cores vêm todos dos tokens. */
+:root{
+  --font:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --bg:#EEF2F4; --surface:#FFFFFF; --surface-2:#F6F8F9;
+  --ink:#12202B; --ink-2:#44545F; --ink-3:#5B6B76;
+  --line:#DCE2E6; --line-strong:#B8C4CC;
+  --brand:#0E3B43; --brand-ink:#FFFFFF; --brand-2:#C5D8DB; --brand-hover:rgba(255,255,255,.09); --brand-on:rgba(255,255,255,.14);
+  --accent:#C2410C; --accent-hover:#9A3412; --on-accent:#FFFFFF;
+  --focus:#1D6FD0;
+  --sel-bg:#E3F1F3; --sel-line:#0E3B43;
+  --seg-on-bg:#0E3B43; --seg-on-fg:#FFFFFF;
+  --ok-bg:#DDF3E4; --ok-fg:#14532D;
+  --warn-bg:#FFF1D6; --warn-fg:#7A4B00;
+  --info-bg:#E3EAF2; --info-fg:#1F3A5C;
+  --teal-bg:#D8EEF0; --teal-fg:#0B4A52;
+  --danger-bg:#FBE3E0; --danger-fg:#8A1F11; --danger-line:#D9877B; --danger-solid:#B42318; --on-danger:#FFFFFF;
+  --muted-bg:#E8ECEF; --muted-fg:#44545F;
+  --toast-bg:#12202B; --toast-fg:#FFFFFF;
+  --scrim:rgba(10,20,25,.55);
+  --band:var(--surface);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1519; --surface:#131F25; --surface-2:#182830;
+    --ink:#E8EEF1; --ink-2:#AFC0C9; --ink-3:#8FA2AD;
+    --line:#243640; --line-strong:#3A5560;
+    --brand:#08262B; --brand-ink:#FFFFFF; --brand-2:#9DB9BE; --brand-hover:rgba(255,255,255,.08); --brand-on:rgba(255,255,255,.14);
+    --accent:#F28A55; --accent-hover:#F7A276; --on-accent:#1B0D05;
+    --focus:#7DB4F5;
+    --sel-bg:#12353B; --sel-line:#8ED3DB;
+    --seg-on-bg:#D9EEF1; --seg-on-fg:#0A2A30;
+    --ok-bg:#123524; --ok-fg:#8FE0AE;
+    --warn-bg:#3A2B0A; --warn-fg:#F3C56B;
+    --info-bg:#162B44; --info-fg:#9CC2F0;
+    --teal-bg:#0E3A40; --teal-fg:#8ED3DB;
+    --danger-bg:#3E1713; --danger-fg:#F5A79B; --danger-line:#8A4A41; --danger-solid:#F28B7C; --on-danger:#1B0705;
+    --muted-bg:#1F2F37; --muted-fg:#AFC0C9;
+    --toast-bg:#E8EEF1; --toast-fg:#0C1519;
+    --scrim:rgba(0,0,0,.65);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1519; --surface:#131F25; --surface-2:#182830;
+  --ink:#E8EEF1; --ink-2:#AFC0C9; --ink-3:#8FA2AD;
+  --line:#243640; --line-strong:#3A5560;
+  --brand:#08262B; --brand-ink:#FFFFFF; --brand-2:#9DB9BE; --brand-hover:rgba(255,255,255,.08); --brand-on:rgba(255,255,255,.14);
+  --accent:#F28A55; --accent-hover:#F7A276; --on-accent:#1B0D05;
+  --focus:#7DB4F5;
+  --sel-bg:#12353B; --sel-line:#8ED3DB;
+  --seg-on-bg:#D9EEF1; --seg-on-fg:#0A2A30;
+  --ok-bg:#123524; --ok-fg:#8FE0AE;
+  --warn-bg:#3A2B0A; --warn-fg:#F3C56B;
+  --info-bg:#162B44; --info-fg:#9CC2F0;
+  --teal-bg:#0E3A40; --teal-fg:#8ED3DB;
+  --danger-bg:#3E1713; --danger-fg:#F5A79B; --danger-line:#8A4A41; --danger-solid:#F28B7C; --on-danger:#1B0705;
+  --muted-bg:#1F2F37; --muted-fg:#AFC0C9;
+  --toast-bg:#E8EEF1; --toast-fg:#0C1519;
+  --scrim:rgba(0,0,0,.65);
+  color-scheme:dark;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{font-family:var(--font);font-size:14px;line-height:1.5;background:var(--bg);color:var(--ink);margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:80;background:var(--band)}
+button,input,select{font:inherit;color:inherit}
+a{color:inherit}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.sidebar :focus-visible{outline-color:#fff}
+#main:focus{outline:none}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;padding:0}
+.ico{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- estrutura ---------- */
+.shell{display:grid;grid-template-columns:268px minmax(0,1fr);min-height:100vh}
+.sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--brand);color:var(--brand-ink);display:flex;flex-direction:column;gap:22px;padding:22px 12px 16px max(16px,env(safe-area-inset-left,0px))}
+.brand{display:flex;align-items:center;padding:2px 8px 2px 0}
+.brand .logo{display:block;max-width:100%;height:auto}
+.brand-mark{width:44px;height:44px;border-radius:12px;background:#C2410C;color:#fff;display:grid;place-items:center;flex:none}
+.brand b{display:block;font-size:17px;font-weight:800;letter-spacing:.02em;line-height:1.15}
+.brand small{display:block;font-size:12px;color:var(--brand-2);font-weight:500}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav-i{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:10px;border:0;background:transparent;color:var(--brand-2);font-weight:600;font-size:14px;text-decoration:none;cursor:pointer;text-align:left;width:100%}
+.nav-i:hover{background:var(--brand-hover);color:#fff}
+.nav-i.on{background:var(--brand-on);color:#fff;font-weight:700}
+.nav-i.off{opacity:.75}
+.nav-i em{margin-left:auto;white-space:nowrap;flex:none;font-style:normal;font-size:11px;font-weight:600;color:var(--brand-2);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:0 8px;line-height:18px}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+.side-foot p{font-size:12px;color:var(--brand-2);padding:0 12px;line-height:1.4}
+.scrim{display:none}
+.content{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.topbar-in{display:flex;align-items:center;gap:12px;min-height:64px;padding:8px max(var(--gut),env(safe-area-inset-right,0px)) 8px max(var(--gut),env(safe-area-inset-left,0px))}
+.spacer{flex:1}
+.icon-btn{width:44px;height:44px;border-radius:12px;border:1.5px solid var(--line-strong);background:var(--surface);display:none;place-items:center;cursor:pointer}
+.view-as{display:flex;align-items:center;gap:10px}
+.view-as>span{font-size:12px;color:var(--ink-3);font-weight:600}
+.user{display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--teal-bg);color:var(--teal-fg);display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.user b{display:block;font-size:13px;line-height:1.2}
+.user small{display:block;font-size:12px;color:var(--ink-3)}
+:root{--gut:32px}
+.page{max-width:1200px;width:100%;margin:0 auto;padding:28px max(var(--gut),env(safe-area-inset-right,0px)) 56px max(var(--gut),env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:20px}
+.crumbs{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0;font-size:13px;color:var(--ink-3);font-weight:600}
+.crumbs li+li::before{content:"/";margin-right:6px;color:var(--line-strong)}
+.crumbs a{text-decoration:none}
+.crumbs a:hover{text-decoration:underline}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.ph-t{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ph h1{font-size:26px;line-height:1.2;font-weight:800;letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
+.ph p{color:var(--ink-2);max-width:62ch}
+.ph-b{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ph-a{display:flex;flex-wrap:wrap;gap:10px}
+
+/* ---------- componentes ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;min-width:0}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.card-h h2{font-size:15px;font-weight:800}
+.card-b{padding:20px}
+.stack{display:flex;flex-direction:column;gap:20px;min-width:0}
+.grid-2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 24px;margin:0;padding:20px}
+.kv dt{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+.kv dd{margin:3px 0 0;font-weight:600;overflow-wrap:anywhere}
+.kv .wide{grid-column:1/-1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;border:1.5px solid transparent;font-weight:700;font-size:14px;text-decoration:none;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--accent);color:var(--on-accent)}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-secondary{background:var(--surface);border-color:var(--line-strong);color:var(--ink)}
+.btn-secondary:hover{background:var(--surface-2)}
+.btn-warn{background:var(--surface);border-color:var(--danger-line);color:var(--danger-fg)}
+.btn-warn:hover{background:var(--danger-bg)}
+.btn-danger{background:var(--danger-solid);color:var(--on-danger)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn-block{width:100%}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;line-height:18px;white-space:nowrap}
+.t-ok{background:var(--ok-bg);color:var(--ok-fg)}
+.t-warn{background:var(--warn-bg);color:var(--warn-fg)}
+.t-info{background:var(--info-bg);color:var(--info-fg)}
+.t-teal{background:var(--teal-bg);color:var(--teal-fg)}
+.t-danger{background:var(--danger-bg);color:var(--danger-fg)}
+.t-muted{background:var(--muted-bg);color:var(--muted-fg)}
+.toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+.search{position:relative;flex:1 1 280px;min-width:0}
+.search .ico{position:absolute;left:14px;top:13px;color:var(--ink-3);pointer-events:none}
+.search .input{padding-left:42px}
+.input,.select{width:100%;height:44px;border:1.5px solid var(--line-strong);border-radius:10px;padding:0 14px;background:var(--surface);font-size:16px;min-width:0}
+.select{padding-right:10px}
+.input::placeholder{color:var(--ink-3);opacity:1}
+.input[aria-invalid="true"],.select[aria-invalid="true"]{border-color:var(--danger-solid)}
+.toolbar .select{width:auto;min-width:170px}
+.tool-sel{flex:0 1 auto}
+.seg{display:inline-flex;border:1.5px solid var(--line-strong);border-radius:12px;padding:3px;background:var(--surface-2);gap:2px}
+.seg button{min-height:36px;padding:0 14px;border:0;background:transparent;border-radius:9px;font-weight:700;font-size:13px;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--seg-on-bg);color:var(--seg-on-fg)}
+.count{padding:12px 20px;font-size:13px;color:var(--ink-3);font-weight:600;border-bottom:1px solid var(--line)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);padding:10px 20px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.tbl td{padding:14px 20px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tbody tr{position:relative}
+.tbl tbody tr:hover{background:var(--surface-2)}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl td.n,.tbl th.n{text-align:right}
+.rowlink{font-weight:700;text-decoration:none}
+.rowlink::after{content:"";position:absolute;inset:0}
+.rowlink:hover{text-decoration:underline}
+.sub{display:block;color:var(--ink-3);font-size:13px;font-weight:500}
+.chev{color:var(--ink-3);width:40px;padding-left:0!important}
+.only-sm{display:none}
+.empty{padding:40px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--ink-2)}
+.empty b{font-size:15px;color:var(--ink)}
+.empty .ico{color:var(--ink-3)}
+.minilist{list-style:none;margin:0;padding:0}
+.minilist li{position:relative;display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.minilist li:last-child{border-bottom:0}
+.minilist li:hover{background:var(--surface-2)}
+.minilist .grow{flex:1;min-width:0}
+.banner{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:12px;background:var(--info-bg);color:var(--info-fg);font-weight:600}
+.banner.t-danger{background:var(--danger-bg);color:var(--danger-fg)}
+.note{display:flex;gap:10px;align-items:flex-start;color:var(--ink-2);font-size:13px}
+.note .ico{margin-top:2px;color:var(--ink-3)}
+
+/* ---------- formulários ---------- */
+.form{display:flex;flex-direction:column;gap:20px;max-width:820px}
+.fs{border:0;margin:0;padding:0;min-width:0}
+.fs legend{padding:0;font-weight:800;font-size:15px;margin-bottom:12px}
+.fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.fgrid .wide{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label,.lbl{font-weight:700;font-size:13px}
+.req{color:var(--danger-fg)}
+.hint{font-size:12.5px;color:var(--ink-3)}
+.err{display:flex;gap:6px;align-items:flex-start;color:var(--danger-fg);font-size:12.5px;font-weight:700}
+.choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.opt{position:relative;display:block}
+.opt input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.opt-box{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 14px;border:1.5px solid var(--line-strong);border-radius:12px;background:var(--surface);font-weight:700}
+.opt-box small{display:block;font-weight:500;color:var(--ink-3);font-size:12.5px}
+.opt input:checked+.opt-box{border-color:var(--sel-line);background:var(--sel-bg)}
+.opt input:focus-visible+.opt-box{outline:3px solid var(--focus);outline-offset:2px}
+.form-a{display:flex;flex-wrap:wrap;gap:12px;padding-top:4px}
+.check{display:flex;gap:12px;align-items:flex-start;font-weight:600;cursor:pointer}
+.check input{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--accent)}
+
+/* ---------- login ---------- */
+.login{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);min-height:100vh}
+.login-brand{background:var(--brand);color:#fff;padding:56px max(48px,env(safe-area-inset-left,0px)) 48px;display:flex;flex-direction:column;justify-content:space-between;gap:40px}
+.login-brand h1{font-size:40px;line-height:1.1;font-weight:800;letter-spacing:.01em;margin-top:18px}
+.login-logo{display:block;max-width:100%}
+.login-logo svg{display:block;max-width:100%;height:auto}
+.login-brand p{color:var(--brand-2);font-size:17px;max-width:30ch;margin-top:12px;line-height:1.5}
+.login-brand small{color:var(--brand-2);font-size:13px;max-width:44ch}
+.login-form{display:grid;place-items:center;padding:40px max(32px,env(safe-area-inset-right,0px));background:var(--surface)}
+.login-card{width:100%;max-width:400px;display:flex;flex-direction:column;gap:18px}
+.login-card h2{font-size:28px;font-weight:800}
+.login-card .lead{color:var(--ink-2)}
+.pw{position:relative;display:flex}
+.pw .input{padding-right:92px}
+.pw button{position:absolute;right:4px;top:4px;height:36px;min-width:72px;border:0;background:transparent;font-weight:700;color:var(--ink);cursor:pointer;border-radius:8px}
+.link{display:inline-flex;align-items:center;min-height:44px;font-weight:700;text-decoration:underline;background:none;border:0;cursor:pointer;padding:0;color:var(--ink)}
+
+/* ---------- modal e aviso ---------- */
+.modal-back{position:fixed;inset:0;z-index:60;background:var(--scrim);display:grid;place-items:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal{width:100%;max-width:540px;max-height:100%;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.modal h2{font-size:20px;font-weight:800;line-height:1.25}
+.modal-b{display:flex;flex-direction:column;gap:12px;color:var(--ink-2)}
+.modal-b ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.modal-f{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+.toasts{position:fixed;left:0;right:0;bottom:0;z-index:90;display:grid;justify-items:center;gap:8px;padding:0 max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));pointer-events:none}
+.toast{background:var(--toast-bg);color:var(--toast-fg);padding:12px 16px;border-radius:12px;font-weight:700;display:flex;gap:10px;align-items:center;max-width:540px;pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+
+/* ---------- celular e tablet ---------- */
+@media (max-width:1100px){
+  .grid-2{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:899px){
+  :root{--gut:16px}
+  .shell{display:block}
+  .sidebar{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);height:100%;z-index:50;transform:translateX(-102%);transition:transform .2s ease;padding-top:max(22px,env(safe-area-inset-top,0px))}
+  .shell.drawer-open .sidebar{transform:none}
+  .shell.drawer-open .scrim{display:block;position:fixed;inset:0;z-index:45;background:var(--scrim);border:0}
+  .icon-btn{display:grid}
+  .user div{display:none}
+  .view-as>span{display:none}
+  .page{padding-top:20px;padding-bottom:40px}
+  .ph h1{font-size:22px}
+  .login{grid-template-columns:minmax(0,1fr)}
+  .login-brand{padding:max(40px,env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) 28px max(24px,env(safe-area-inset-left,0px));gap:12px}
+  .login-logo svg{width:210px}
+  .login-brand small{display:none}
+  .login-form{padding:28px max(24px,env(safe-area-inset-right,0px)) 40px max(24px,env(safe-area-inset-left,0px));align-items:start}
+}
+@media (max-width:760px){
+  .tiles{gap:8px}
+  .tile{padding:12px}
+  .tile b{font-size:24px}
+  .tile span{font-size:12px}
+  .pnl-bar{border-radius:14px}
+  .tbl thead{display:none}
+  .tbl,.tbl tbody{display:block}
+  .tbl tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .tbl tbody tr:last-child{border-bottom:0}
+  .tbl td{display:block;padding:0;border:0;min-width:0}
+  .tbl td.hide-sm{display:none}
+  .tbl td.c-main{grid-column:1}
+  .tbl td.c-status{grid-column:2;grid-row:1;align-self:start}
+  .tbl td.only-sm{display:block;grid-column:1/-1;color:var(--ink-2);font-size:13px}
+  .toolbar{padding:14px 16px}
+  .toolbar .select{width:100%}
+  .tool-sel{flex:1 1 100%}
+  .toolbar .seg{width:100%}
+  .toolbar .seg.seg-4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .toolbar .seg button{flex:1}
+  .count{padding:10px 16px}
+  .card-h{padding:14px 16px}
+  .kv{padding:16px;gap:16px}
+  .minilist li{padding:12px 16px}
+}
+@media (max-width:560px){
+  .fgrid,.choice,.kv{grid-template-columns:minmax(0,1fr)}
+  .view-as .v-l{display:none}.view-as .v-s{display:inline}
+  .topbar .user{display:none}
+  .view-as .seg button{padding:0 10px}
+  .ph-a{width:100%}
+  .ph-a .btn{flex:1}
+  .form-a .btn{flex:1}
+  .modal{padding:20px}
+  .modal-f .btn{flex:1}
+}
+
+/* ---------- orçamentos ---------- */
+.choice-1{grid-template-columns:minmax(0,1fr)}
+.field[hidden]{display:none}
+/* ---------- usuários ---------- */
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;gap:4px}
+.tile b{font-size:32px;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{color:var(--ink-2);font-weight:600;font-size:13px}
+.tile.t-alert b{color:var(--danger-fg)}
+.tile.t-warnc b{color:var(--warn-fg)}
+.pnl-bar{border:1px solid var(--line)}
+.lnk{font-weight:700;text-decoration:none}
+.lnk:hover{text-decoration:underline}
+.minilist li{flex-wrap:wrap}
+.input.ta{height:auto;min-height:112px;padding:10px 14px;resize:vertical;line-height:1.45}
+.input[type=file]{height:auto;min-height:44px;padding:8px 10px}
+.nav-i em.cnt{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:800}
+.choice-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.choice-3 .opt-box{justify-content:center;text-align:center;padding:10px 6px;font-size:13px}
+.v-s{display:none}
+.dec{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.quote{margin:0;padding:10px 14px;border-left:4px solid var(--danger-line);background:var(--surface-2);border-radius:0 10px 10px 0;color:var(--ink)}
+.notif{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.notif li{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.notif li.new{border-color:var(--sel-line)}
+.notif small{display:block;color:var(--ink-3)}
+.orc-form{display:flex;flex-direction:column;gap:20px;max-width:980px}
+.irow{display:grid;grid-template-columns:minmax(0,2.6fr) minmax(0,.8fr) minmax(0,1.2fr) minmax(0,1.2fr) auto;gap:12px;align-items:start;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.ro{min-height:44px;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;border-radius:10px;background:var(--surface);border:1.5px dashed var(--line-strong);font-weight:700}
+.rm-btn{align-self:end;min-width:44px;height:44px;border-radius:10px;border:1.5px solid var(--danger-line);background:var(--surface);color:var(--danger-fg);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-weight:700;padding:0 10px}
+.rm-btn:hover{background:var(--danger-bg)}
+.rm-t{display:none}
+.totbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 20px;border-radius:14px;background:var(--brand);color:var(--brand-ink);font-weight:700}
+.totbar b{font-size:22px;font-variant-numeric:tabular-nums}
+.tbl tfoot td{padding:14px 20px;font-weight:800;background:var(--surface-2);border-top:1px solid var(--line)}
+.vers{display:flex;flex-direction:column;gap:16px;max-width:900px}
+.ver{border-left:4px solid var(--line-strong)}
+.ver-on{border-left-color:var(--accent)}
+.ver summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+.det-in{margin:4px -20px -20px;border-top:1px solid var(--line)}
+.det-pag{padding:12px 20px 16px;color:var(--ink-2)}
+@media (max-width:1100px){
+  .irow{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .i-mat{grid-column:1/-1}
+}
+@media (max-width:760px){
+  .tbl tfoot{display:block}
+  .tbl tfoot tr{display:grid;grid-template-columns:minmax(0,1fr) auto;padding:14px 16px;background:var(--surface-2);border-top:1px solid var(--line)}
+  .tbl tfoot td{padding:0;border:0;background:transparent;display:block}
+  .tbl tfoot td.hide-sm{display:none}
+  .irow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rm-btn{grid-column:1/-1;width:100%}
+  .irow>.field:nth-child(4){grid-column:1/-1}
+  .rm-t{display:inline}
+  .det-in{margin:4px -20px -20px}
+  .totbar b{font-size:20px}
+}
+@media (prefers-reduced-motion:reduce){
+  .sidebar{transition:none}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-painel" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+  <symbol id="i-obra" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.5L12 12l8.7-4.5M12 22V12"/></symbol>
+  <symbol id="i-factory" viewBox="0 0 24 24"><path d="M2 20V9l6 4V9l6 4V5h4a2 2 0 0 1 2 2v13z"/><path d="M2 20h20"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></symbol>
+  <symbol id="i-restore" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-shieldx" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+  <symbol id="i-paint" viewBox="0 0 24 24"><rect x="3" y="3" width="14" height="6" rx="1"/><path d="M17 6h3v5H11v3"/><rect x="9" y="14" width="4" height="7" rx="1"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 12A9 9 0 0 1 18.5 5.8L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+</svg>
+
+<div id="app"></div>
+<div id="modal-root"></div>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ========== dados fictícios (exemplos para a demonstração) ========== */
+var FASES=[
+  {id:'projeto',  nome:'Projeto/Lançamento', tone:'info',  icon:'pencil'},
+  {id:'fundacao', nome:'Fundação',           tone:'warn',  icon:'layers'},
+  {id:'acabamento',nome:'Acabamento',        tone:'teal',  icon:'paint'},
+  {id:'acabfinal',nome:'Acabamento Final',   tone:'ok',    icon:'check'},
+  {id:'suspensa', nome:'Suspensa',           tone:'muted', icon:'pause'}
+];
+var PADROES=['Popular','Médio','Alto'];
+var NAV=[
+  {id:'painel',label:'Painel',icon:'painel',route:'painel'},
+  {id:'clientes',label:'Clientes',icon:'users',route:'clientes'},
+  {id:'obras',label:'Obras',icon:'obra',route:'obras'},
+  {id:'orcamentos',label:'Orçamentos',icon:'file',route:'orcamentos',repOnly:true},
+  {id:'entregas',label:'Entregas',icon:'truck',route:'entregas',repOnly:true},
+  {id:'materiais',label:'Materiais',icon:'box',route:'materiais'},
+  {id:'representadas',label:'Representadas',icon:'factory',route:'representadas'},
+  {id:'usuarios',label:'Usuários',icon:'user',route:'usuarios',admin:true}
+];
+
+var state={
+  logged:false, perfil:'representante', prefillCliente:null, loginPerfil:'representante',
+  fc:{q:'',tipo:'todos',status:'ativos'},
+  fo:{q:'',fase:'todas',status:'ativas'},
+  nextC:7, nextO:8, nextUsr:8, nextMat:18, nextRep:5, frp:{q:'',status:'ativas'}, prefillRep:null, fm:{q:'',rep:'todas',status:'ativos'}, fu:{q:'',perfil:'todos',status:'ativos'}, loginErr:null, loginEmail:'carla.nogueira@example.com',
+  usuarios:[
+    {id:1,nome:'André Luiz Magalhães',email:'andre.magalhaes@example.com',perfil:'administrador',clienteId:null,ativo:true,cred:'2026-08-03'},
+    {id:2,nome:'Carla Nogueira',email:'carla.nogueira@example.com',perfil:'representante',clienteId:null,ativo:true,cred:'2026-08-03'},
+    {id:3,nome:'Rafael Teixeira',email:'rafael.teixeira@example.com',perfil:'representante',clienteId:null,ativo:true,cred:'2026-08-03'},
+    {id:4,nome:'Fernanda Lima',email:'fernanda.lima@exemploa.example.com',perfil:'cliente',clienteId:1,ativo:true,cred:'2026-08-12'},
+    {id:5,nome:'Paulo Andrade',email:'paulo.andrade@exemplob.example.com',perfil:'cliente',clienteId:2,ativo:true,cred:'2026-08-20'},
+    {id:6,nome:'Marta Oliveira Prado',email:'marta.prado@example.com',perfil:'cliente',clienteId:4,ativo:true,cred:'2026-09-02'},
+    {id:7,nome:'Ricardo Souza',email:'ricardo.souza@example.com',perfil:'representante',clienteId:null,ativo:false,cred:'2026-08-03'}
+  ], nextOrcId:9, nextNum:1047, nextEnt:6, fe:{q:'',status:'todos'}, fp:{dias:7,tipo:'todos',rep:'todos'}, entErr:null, entVal:'',
+  entregas:[
+    {id:1,orcId:2,prevista:'2026-10-15',real:'2026-10-16'},
+    {id:2,orcId:2,prevista:'2026-10-24',real:null},
+    {id:3,orcId:2,prevista:'2026-11-12',real:null},
+    {id:4,orcId:6,prevista:'2026-09-20',real:'2026-09-20'},
+    {id:5,orcId:7,prevista:'2026-10-22',real:null}
+  ], clienteId:1, notifs:[], nextNotif:1, decErr:null, decMotivo:'',
+  fq:{q:'',status:'todos',rep:'todas'}, draft:null, draftErr:null, prefillObra:null,
+  representadas:[
+    {id:1,nome:'Astra',ativa:true},{id:2,nome:'Japi',ativa:true},{id:3,nome:'Nambei',ativa:true},{id:4,nome:'Termomecânica',ativa:true}
+  ],
+  materiais:[
+    {id:1,repId:1,codigo:'AST-001',descricao:'Registro de gaveta 3/4"',unid:'un',preco:38.90,ativo:true},
+    {id:2,repId:1,codigo:'AST-002',descricao:'Registro de pressão 3/4"',unid:'un',preco:42.50,ativo:true},
+    {id:3,repId:1,codigo:'AST-003',descricao:'Torneira de jardim 1/2"',unid:'un',preco:24.90,ativo:true},
+    {id:4,repId:1,codigo:'AST-004',descricao:'Válvula de descarga 1.1/2"',unid:'un',preco:118.00,ativo:true},
+    {id:5,repId:2,codigo:'JAP-001',descricao:'Joelho galvanizado 3/4"',unid:'un',preco:9.80,ativo:true},
+    {id:6,repId:2,codigo:'JAP-002',descricao:'Luva galvanizada 3/4"',unid:'un',preco:8.40,ativo:true},
+    {id:7,repId:2,codigo:'JAP-003',descricao:'Tê galvanizado 3/4"',unid:'un',preco:12.60,ativo:true},
+    {id:8,repId:2,codigo:'JAP-004',descricao:'Niple galvanizado 3/4"',unid:'un',preco:7.20,ativo:true},
+    {id:9,repId:2,codigo:'JAP-005',descricao:'Bucha de redução galvanizada (descontinuada)',unid:'un',preco:6.50,ativo:false},
+    {id:10,repId:3,codigo:'NAM-001',descricao:'Tubo PVC soldável 25 mm (barra 6 m)',unid:'barra',preco:32.00,ativo:true},
+    {id:11,repId:3,codigo:'NAM-002',descricao:'Joelho PVC 90° 25 mm',unid:'un',preco:2.90,ativo:true},
+    {id:12,repId:3,codigo:'NAM-003',descricao:'Adesivo para PVC 175 g',unid:'fr',preco:18.50,ativo:true},
+    {id:13,repId:3,codigo:'NAM-004',descricao:'Caixa sifonada 150 mm',unid:'un',preco:29.90,ativo:true},
+    {id:14,repId:4,codigo:'TER-001',descricao:'Tubo de cobre 22 mm (barra 5 m)',unid:'barra',preco:289.00,ativo:true},
+    {id:15,repId:4,codigo:'TER-002',descricao:'Joelho de cobre 22 mm',unid:'un',preco:14.80,ativo:true},
+    {id:16,repId:4,codigo:'TER-003',descricao:'Luva de cobre 22 mm',unid:'un',preco:11.50,ativo:true},
+    {id:17,repId:4,codigo:'TER-004',descricao:'Tubo de cobre 15 mm (barra 5 m)',unid:'barra',preco:176.00,ativo:true}
+  ],
+  orcs:[
+    {id:1,numero:1042,obraId:1,repId:3,status:'pendente',decisao:null,doc:null,versoes:[
+      {n:1,data:'2026-10-05',pag:'30 dias',vigente:false,itens:[{mid:10,qtd:120,preco:32.00},{mid:11,qtd:480,preco:2.90},{mid:12,qtd:20,preco:18.50}]},
+      {n:2,data:'2026-10-14',pag:'30/60/90 dias',vigente:true,itens:[{mid:10,qtd:140,preco:31.20},{mid:11,qtd:480,preco:2.90},{mid:12,qtd:24,preco:18.50},{mid:13,qtd:48,preco:29.90}]}]},
+    {id:2,numero:1043,obraId:3,repId:4,status:'aprovado',decisao:'2026-09-18',doc:'Orcamento_1043_v2_assinado.pdf',versoes:[
+      {n:1,data:'2026-09-02',pag:'30 dias',vigente:false,itens:[{mid:14,qtd:60,preco:289.00},{mid:15,qtd:240,preco:14.80},{mid:16,qtd:120,preco:11.50}]},
+      {n:2,data:'2026-09-11',pag:'Entrada 30% + 30/60 dias',vigente:true,dec:{tipo:'aprovado',data:'2026-09-18',doc:'Orcamento_1043_v2_assinado.pdf'},itens:[{mid:14,qtd:54,preco:282.50},{mid:15,qtd:240,preco:14.20},{mid:16,qtd:120,preco:11.50},{mid:17,qtd:30,preco:176.00}]}]},
+    {id:3,numero:1044,obraId:4,repId:1,status:'reprovado',decisao:'2026-10-09',doc:null,motivo:'Valor acima do previsto pela construtora; pediram revisar a quantidade de válvulas de descarga.',versoes:[
+      {n:1,data:'2026-09-28',pag:'30 dias',vigente:true,dec:{tipo:'reprovado',data:'2026-10-09',motivo:'Valor acima do previsto pela construtora; pediram revisar a quantidade de válvulas de descarga.'},itens:[{mid:1,qtd:96,preco:38.90},{mid:2,qtd:96,preco:42.50},{mid:4,qtd:64,preco:118.00}]}]},
+    {id:4,numero:1045,obraId:7,repId:2,status:'pendente',decisao:null,doc:null,versoes:[
+      {n:1,data:'2026-10-20',pag:'À vista',vigente:true,itens:[{mid:5,qtd:320,preco:9.80},{mid:6,qtd:320,preco:8.40},{mid:7,qtd:160,preco:12.60}]}]},
+    {id:5,numero:1046,obraId:2,repId:1,status:'pendente',decisao:null,doc:null,versoes:[
+      {n:1,data:'2026-10-22',pag:'Entrada 30% + 30/60 dias',vigente:true,itens:[{mid:1,qtd:200,preco:38.90},{mid:2,qtd:200,preco:42.50},{mid:3,qtd:96,preco:24.90},{mid:4,qtd:96,preco:118.00}]}]},
+    {id:6,numero:1041,obraId:5,repId:3,status:'aprovado',decisao:'2026-09-10',doc:'Orcamento_1041_v1_assinado.pdf',versoes:[
+      {n:1,data:'2026-09-03',pag:'À vista',vigente:true,dec:{tipo:'aprovado',data:'2026-09-10',doc:'Orcamento_1041_v1_assinado.pdf'},itens:[{mid:10,qtd:18,preco:32.00},{mid:11,qtd:60,preco:2.90},{mid:13,qtd:4,preco:29.90}]}]},
+    {id:7,numero:1040,obraId:1,repId:3,status:'aprovado',decisao:'2026-10-01',doc:'Orcamento_1040_v1_assinado.pdf',versoes:[
+      {n:1,data:'2026-09-25',pag:'30 dias',vigente:true,dec:{tipo:'aprovado',data:'2026-10-01',doc:'Orcamento_1040_v1_assinado.pdf'},itens:[{mid:10,qtd:90,preco:31.50},{mid:11,qtd:360,preco:2.90},{mid:12,qtd:12,preco:18.50}]}]},
+    {id:8,numero:1039,obraId:7,repId:2,status:'aprovado',decisao:'2026-10-02',doc:'Orcamento_1039_v1_assinado.pdf',versoes:[
+      {n:1,data:'2026-09-24',pag:'30/60/90 dias',vigente:true,dec:{tipo:'aprovado',data:'2026-10-02',doc:'Orcamento_1039_v1_assinado.pdf'},itens:[{mid:5,qtd:200,preco:9.80},{mid:6,qtd:200,preco:8.40},{mid:8,qtd:100,preco:7.20}]}]}
+  ],
+  clientes:[
+    {id:1,tipo:'construtora',nome:'Construtora Exemplo A',doc:'00.111.222/0001-33',tel:'(15) 3000-0001',email:'compras@exemploa.example.com',ativo:true,eliminado:null},
+    {id:2,tipo:'construtora',nome:'Construtora Exemplo B',doc:'00.111.333/0001-44',tel:'(19) 3000-0002',email:'obras@exemplob.example.com',ativo:true,eliminado:null},
+    {id:3,tipo:'construtora',nome:'Construtora Exemplo C',doc:'00.111.444/0001-55',tel:'(15) 3000-0003',email:'contato@exemploc.example.com',ativo:true,eliminado:null},
+    {id:4,tipo:'pf',nome:'Marta Oliveira Prado',doc:'111.222.333-44',tel:'(15) 99000-0004',email:'marta.prado@example.com',ativo:true,eliminado:null},
+    {id:5,tipo:'pf',nome:'Lúcia Ferraz Andrade',doc:'111.222.555-66',tel:'(11) 99000-0005',email:'lucia.andrade@example.com',ativo:false,eliminado:null},
+    {id:6,tipo:'construtora',nome:'Construtora Exemplo D',doc:'00.111.666/0001-77',tel:'(19) 3000-0006',email:'engenharia@exemplod.example.com',ativo:true,eliminado:null}
+  ],
+  obras:[
+    {id:1,nome:'Residencial Vila Nova',clienteId:1,endereco:'Rua das Palmeiras, 120',cidade:'Sorocaba',padrao:'Médio',unidades:48,fase:'fundacao',rep:'Carla Nogueira',ativo:true,comprador:{nome:'Henrique Duarte',tel:'(15) 99100-1001',email:'henrique.duarte@example.com',eliminado:null}},
+    {id:2,nome:'Torre Parque Sul',clienteId:1,endereco:'Av. dos Ipês, 800',cidade:'Votorantim',padrao:'Alto',unidades:96,fase:'projeto',rep:'Carla Nogueira',ativo:true,comprador:{nome:'Sandra Lopes',tel:'(15) 99100-1002',email:'sandra.lopes@example.com',eliminado:null}},
+    {id:3,nome:'Condomínio Jardim das Acácias',clienteId:2,endereco:'Rua das Acácias, 45',cidade:'Campinas',padrao:'Médio',unidades:120,fase:'acabamento',rep:'Rafael Teixeira',ativo:true,comprador:{nome:'Bruno Matos',tel:'(19) 99100-1003',email:'bruno.matos@example.com',eliminado:null}},
+    {id:4,nome:'Edifício Praça Central',clienteId:3,endereco:'Praça da Matriz, 10',cidade:'Sorocaba',padrao:'Alto',unidades:64,fase:'projeto',rep:'Carla Nogueira',ativo:true,comprador:{nome:'Patrícia Gomes',tel:'(15) 99100-1004',email:'patricia.gomes@example.com',eliminado:null}},
+    {id:5,nome:'Residência Prado',clienteId:4,endereco:'Rua do Sol, 77',cidade:'Sorocaba',padrao:'Médio',unidades:1,fase:'acabfinal',rep:'Carla Nogueira',ativo:true,comprador:{nome:'Marta Oliveira Prado',tel:'(15) 99000-0004',email:'marta.prado@example.com',eliminado:null}},
+    {id:6,nome:'Casas do Bosque',clienteId:5,endereco:'Estrada do Bosque, km 3',cidade:'Itu',padrao:'Popular',unidades:12,fase:'suspensa',rep:'Rafael Teixeira',ativo:false,comprador:{nome:'Rogério Alves',tel:'(11) 99100-1006',email:'rogerio.alves@example.com',eliminado:null}},
+    {id:7,nome:'Residencial Parque das Flores',clienteId:6,endereco:'Rua das Flores, 300',cidade:'Indaiatuba',padrao:'Popular',unidades:80,fase:'fundacao',rep:'Rafael Teixeira',ativo:true,comprador:{nome:'Diego Ramos',tel:'(19) 99100-1007',email:'diego.ramos@example.com',eliminado:null}}
+  ]
+};
+
+/* ========== logo (contornos; versão para fundo escuro) ========== */
+var LOGO_W=183.95;
+var LOGO_NEG='<g transform="translate(0 0)"><rect width="64" height="64" rx="14" fill="#FFFFFF"/><path d="M12 43V25L22 15L32 25L42 15L52 25V43" fill="none" stroke="#0E3B43" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 52H52" fill="none" stroke="#C2410C" stroke-width="6.2" stroke-linecap="round"/></g><path d="M122.85 6.53V41.63H114.3V20.58L106.45 41.63H99.55L91.65 20.53V41.63H83.1V6.53H93.2L103.05 30.83L112.8 6.53ZM139.05 35.03H150.25V41.63H130.5V6.53H139.05ZM169.7 29.03H164.4V41.63H155.85V6.53H169.7Q173.9 6.53 176.8 7.98Q179.7 9.43 181.15 11.98Q182.6 14.53 182.6 17.83Q182.6 20.88 181.2 23.41Q179.8 25.93 176.9 27.48Q174 29.03 169.7 29.03ZM173.9 17.83Q173.9 15.73 172.7 14.58Q171.5 13.43 169.05 13.43H164.4V22.23H169.05Q171.5 22.23 172.7 21.08Q173.9 19.93 173.9 17.83Z" fill="#FFFFFF"/><path d="M82.72 57.62H84.31L86.75 50.63H85.39L84.19 54.26C83.99 54.88 83.78 55.65 83.53 56.62C83.27 55.66 83.04 54.88 82.85 54.26L81.61 50.63H80.23ZM88.53 57.62H93.09V56.56H89.78V54.61H92.83V53.57H89.78V51.69H93.07V50.63H88.53ZM95.19 57.62H96.46V54.15C96.46 53.76 96.42 53.02 96.37 52.16C96.84 53.07 97.1 53.57 97.47 54.15L99.65 57.62H101.07V50.63H99.8V54.3C99.8 54.73 99.83 55.43 99.88 56.11C99.57 55.41 99.27 54.88 99.02 54.48L96.6 50.63H95.19ZM105.68 57.62C107.81 57.62 109.06 56.3 109.06 54.12C109.06 51.95 107.81 50.63 105.73 50.63H103.32V57.62ZM104.57 56.53V51.72H105.65C107.08 51.72 107.83 52.52 107.83 54.12C107.83 55.73 107.08 56.53 105.62 56.53ZM110.63 57.62H112L112.57 55.89H115.18L115.77 57.62H117.15L114.65 50.63H113.07ZM112.9 54.88 113.2 53.99C113.39 53.37 113.6 52.58 113.85 51.61C114.11 52.57 114.33 53.35 114.53 53.99L114.84 54.88ZM121.38 57.73C123.05 57.73 124.02 56.89 124.02 55.66C124.02 54.44 123 53.9 121.97 53.65L121.32 53.48C120.75 53.34 120.12 53.11 120.12 52.52C120.12 51.99 120.6 51.6 121.39 51.6C122.15 51.6 122.65 51.95 122.71 52.55H123.93C123.89 51.38 122.9 50.54 121.41 50.54C119.95 50.54 118.86 51.36 118.86 52.6C118.86 53.58 119.55 54.17 120.72 54.47L121.51 54.68C122.26 54.88 122.77 55.1 122.77 55.65C122.77 56.25 122.19 56.66 121.37 56.66C120.58 56.66 119.96 56.3 119.9 55.56H118.67C118.72 56.94 119.75 57.73 121.38 57.73ZM128.96 51.69H131.12V57.62H132.37V51.69H134.52V50.63H128.96ZM136.46 57.62H141.01V56.56H137.71V54.61H140.75V53.57H137.71V51.69H140.99V50.63H136.46ZM138.28 49.96H139.16L140.11 48.53H138.93ZM146.09 57.71C147.74 57.71 148.85 56.63 149.04 55.29H147.77C147.61 56.12 146.94 56.59 146.1 56.59C144.97 56.59 144.15 55.73 144.15 54.13C144.15 52.55 144.96 51.66 146.11 51.66C146.94 51.66 147.62 52.13 147.77 52.96H149.03C148.81 51.43 147.62 50.54 146.09 50.54C144.27 50.54 142.89 51.87 142.89 54.13C142.89 56.38 144.25 57.71 146.09 57.71ZM151.03 57.62H152.3V54.15C152.3 53.76 152.26 53.02 152.22 52.16C152.68 53.07 152.95 53.57 153.31 54.15L155.49 57.62H156.91V50.63H155.64V54.3C155.64 54.73 155.67 55.43 155.72 56.11C155.41 55.41 155.11 54.88 154.86 54.48L152.45 50.63H151.03ZM160.41 50.63H159.16V57.62H160.41ZM165.64 57.71C167.29 57.71 168.4 56.63 168.59 55.29H167.32C167.16 56.12 166.49 56.59 165.65 56.59C164.52 56.59 163.7 55.73 163.7 54.13C163.7 52.55 164.52 51.66 165.66 51.66C166.49 51.66 167.17 52.13 167.32 52.96H168.58C168.36 51.43 167.17 50.54 165.64 50.54C163.82 50.54 162.44 51.87 162.44 54.13C162.44 56.38 163.8 57.71 165.64 57.71ZM170.11 57.62H171.48L172.05 55.89H174.66L175.26 57.62H176.63L174.14 50.63H172.55ZM172.39 54.88 172.68 53.99C172.87 53.37 173.08 52.58 173.33 51.61C173.59 52.57 173.81 53.35 174.02 53.99L174.32 54.88ZM180.86 57.73C182.53 57.73 183.5 56.89 183.5 55.66C183.5 54.44 182.49 53.9 181.45 53.65L180.8 53.48C180.23 53.34 179.61 53.11 179.61 52.52C179.61 51.99 180.09 51.6 180.88 51.6C181.63 51.6 182.14 51.95 182.2 52.55H183.41C183.38 51.38 182.38 50.54 180.89 50.54C179.43 50.54 178.34 51.36 178.34 52.6C178.34 53.58 179.03 54.17 180.2 54.47L180.99 54.68C181.75 54.88 182.25 55.1 182.25 55.65C182.25 56.25 181.68 56.66 180.85 56.66C180.06 56.66 179.44 56.3 179.38 55.56H178.15C178.21 56.94 179.23 57.73 180.86 57.73Z" fill="#F4A97F"/>';
+function logo(h){return '<svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+LOGO_W+' 64" width="'+(h*LOGO_W/64).toFixed(1)+'" height="'+h+'" role="img" aria-label="MLP Vendas Técnicas">'+LOGO_NEG+'</svg>';}
+
+/* ========== utilidades ========== */
+function $(s,r){return (r||document).querySelector(s);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+function hoje(){return new Date().toLocaleDateString('pt-BR');}
+function ico(n,size){size=size||18;return '<svg class="ico" width="'+size+'" height="'+size+'" aria-hidden="true"><use href="#i-'+n+'"/></svg>';}
+function cli(id){return state.clientes.filter(function(c){return c.id===id;})[0];}
+function obra(id){return state.obras.filter(function(o){return o.id===id;})[0];}
+function fase(id){return FASES.filter(function(f){return f.id===id;})[0];}
+function tipoNome(t){return t==='pf'?'Pessoa física':'Construtora';}
+function obrasDe(cid){return state.obras.filter(function(o){return o.clienteId===cid;});}
+function isAdmin(){return state.perfil==='administrador';}
+function isCli(){return state.perfil==='cliente';}
+function naoLidas(){return state.notifs.filter(function(n){return !n.lida&&n.rep==='Carla Nogueira';}).length;}
+function faseBadge(id){var f=fase(id);return '<span class="pill t-'+f.tone+'">'+ico(f.icon,14)+esc(f.nome)+'</span>';}
+function statusPill(ativo,fem){return ativo?'<span class="pill t-ok">'+ico('check',14)+(fem?'Ativa':'Ativo')+'</span>':'<span class="pill t-muted">'+ico('archive',14)+(fem?'Inativa':'Inativo')+'</span>';}
+function nomeCli(id){var c=cli(id);return c?c.nome:'—';}
+
+function maskTel(v){var d=String(v).replace(/\D/g,'').slice(0,11);
+  if(d.length>10)return d.replace(/^(\d{2})(\d{5})(\d{0,4}).*/,'($1) $2-$3');
+  if(d.length>6)return d.replace(/^(\d{2})(\d{4})(\d{0,4}).*/,'($1) $2-$3');
+  if(d.length>2)return d.replace(/^(\d{2})(\d*)/,'($1) $2');
+  return d?'('+d:'';}
+function maskCPF(v){var d=String(v).replace(/\D/g,'').slice(0,11);
+  return d.replace(/^(\d{3})(\d)/,'$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d)/,'.$1-$2');}
+function maskCNPJ(v){var d=String(v).replace(/\D/g,'').slice(0,14);
+  return d.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d)/,'$1-$2');}
+function digits(s){return String(s||'').replace(/\D/g,'');}
+function emailOk(s){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);}
+
+/* ========== avisos e janela de confirmação ========== */
+function toast(msg){
+  var t=document.createElement('div');t.className='toast';t.innerHTML=ico('check',18)+'<span>'+esc(msg)+'</span>';
+  $('#toasts').appendChild(t);setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},4200);
+}
+var modalCtx=null;
+function openModal(o){
+  o.cancel=o.cancel||'Cancelar';
+  closeModal(true);
+  var id='m'+Date.now();
+  $('#modal-root').innerHTML=
+   '<div class="modal-back" data-action="modal-backdrop"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="'+id+'-t">'+
+   '<h2 id="'+id+'-t">'+esc(o.title)+'</h2><div class="modal-b">'+o.body+'</div>'+
+   (o.check?'<label class="check"><input type="checkbox" id="m-check"><span>'+esc(o.check)+'</span></label>':'')+
+   '<div class="modal-f"><button type="button" class="btn btn-secondary" data-action="modal-cancel" id="m-cancel">'+esc(o.cancel)+'</button>'+
+   '<button type="button" class="btn '+(o.tone==='danger'?'btn-danger':'btn-primary')+'" data-action="modal-ok" id="m-ok"'+(o.check?' disabled':'')+'>'+esc(o.ok)+'</button></div></div></div>';
+  modalCtx={ok:o.onOk,opener:document.activeElement};
+  $('#m-cancel').focus();
+}
+function closeModal(silent){
+  var root=$('#modal-root');if(!root||!root.firstChild){modalCtx=null;return;}
+  root.innerHTML='';
+  if(!silent&&modalCtx&&modalCtx.opener&&document.contains(modalCtx.opener)){try{modalCtx.opener.focus();}catch(e){}}
+  modalCtx=null;
+}
+
+/* ========== rotas ========== */
+function parse(){
+  var h=(location.hash||'').replace(/^#/,''),m;
+  if(!h||h==='login')return {n:'login'};
+  if(h==='clientes')return {n:'clientes'};
+  if(h==='cliente-novo')return {n:'cliente-form'};
+  if((m=h.match(/^cliente-(\d+)-editar$/)))return {n:'cliente-form',id:+m[1]};
+  if((m=h.match(/^cliente-(\d+)$/)))return {n:'cliente',id:+m[1]};
+  if(h==='obras')return {n:'obras'};
+  if(h==='obra-nova')return {n:'obra-form'};
+  if((m=h.match(/^obra-(\d+)-editar$/)))return {n:'obra-form',id:+m[1]};
+  if((m=h.match(/^obra-(\d+)$/)))return {n:'obra',id:+m[1]};
+  if(h==='usuarios')return {n:'usuarios'};
+  if(h==='usuario-novo')return {n:'usuario-form'};
+  if((m=h.match(/^usuario-(\d+)-editar$/)))return {n:'usuario-form',id:+m[1]};
+  if((m=h.match(/^usuario-(\d+)$/)))return {n:'usuario',id:+m[1]};
+  if(h==='representadas')return {n:'repds'};
+  if(h==='representada-nova')return {n:'repd-form'};
+  if((m=h.match(/^representada-(\d+)-editar$/)))return {n:'repd-form',id:+m[1]};
+  if((m=h.match(/^representada-(\d+)$/)))return {n:'repd',id:+m[1]};
+  if(h==='materiais')return {n:'materiais'};
+  if(h==='material-novo')return {n:'mat-form'};
+  if((m=h.match(/^material-(\d+)-editar$/)))return {n:'mat-form',id:+m[1]};
+  if((m=h.match(/^material-(\d+)$/)))return {n:'mat',id:+m[1]};
+  if(h==='painel')return {n:'painel'};
+  if(h==='entregas')return {n:'entregas'};
+  if((m=h.match(/^orcamento-(\d+)-entrega$/)))return {n:'ent-form',kind:'prev',id:+m[1]};
+  if((m=h.match(/^entrega-(\d+)-concluir$/)))return {n:'ent-form',kind:'real',id:+m[1]};
+  if(h==='orcamentos')return {n:'orcs'};
+  if(h==='orcamento-novo')return {n:'orc-form',kind:'novo'};
+  if((m=h.match(/^orcamento-(\d+)-reavaliar$/)))return {n:'orc-form',kind:'reav',id:+m[1]};
+  if((m=h.match(/^orcamento-(\d+)-(aprovar|reprovar)$/)))return {n:'orc-dec',id:+m[1],tipo:m[2]};
+  if((m=h.match(/^orcamento-(\d+)-versoes$/)))return {n:'orc-versoes',id:+m[1]};
+  if((m=h.match(/^orcamento-(\d+)$/)))return {n:'orc',id:+m[1]};
+  return {n:'clientes'};
+}
+function go(h){if(location.hash==='#'+h){state.draft=null;render();}else location.hash=h;}
+
+/* ========== estrutura comum ========== */
+function shell(inner,active){
+  var lista=isCli()?[{id:'orcamentos',label:'Meus orçamentos',icon:'file',route:'orcamentos'}]:NAV.filter(function(n){return (!n.admin||isAdmin())&&!(n.repOnly&&isAdmin());});
+  var items=lista.map(function(n){
+    var on=n.id===active;
+    if(n.route)return '<a class="nav-i'+(on?' on':'')+'" href="#'+n.route+'"'+(on?' aria-current="page"':'')+'>'+ico(n.icon,20)+'<span>'+n.label+'</span></a>';
+    return '<button type="button" class="nav-i off" data-action="soon" data-label="'+n.label+'" aria-disabled="true">'+ico(n.icon,20)+'<span>'+n.label+'</span><em>em breve</em></button>';
+  }).join('');
+  var pf=state.perfil,rep=pf==='representante',nl=naoLidas();
+  var notifBtn=rep?'<button type="button" class="nav-i" data-action="notifs">'+ico('bell',20)+'<span>Notificações</span>'+(nl?'<em class="cnt" aria-label="'+nl+(nl===1?' não lida':' não lidas')+'">'+nl+'</em>':'')+'</button>':'';
+  var uNome=pf==='cliente'?nomeCli(state.clienteId):(rep?'Carla Nogueira':'Administrador'),uAv=pf==='cliente'?'CE':(rep?'CN':'AD'),uPerfil=pf==='cliente'?'Cliente':(rep?'Representante':'Administrador');
+  return '<div class="shell" id="shell">'+
+   '<aside class="sidebar" id="sidebar" aria-label="Menu lateral">'+
+     '<div class="brand">'+logo(46)+'</div>'+
+     '<nav class="nav" aria-label="Principal">'+items+notifBtn+'</nav>'+
+     '<div class="side-foot"><p>Protótipo para a disciplina. Dados de exemplo; nada é salvo ao recarregar.</p>'+
+     '<button type="button" class="nav-i" data-action="logout">'+ico('logout',20)+'<span>Sair</span></button></div>'+
+   '</aside>'+
+   '<button type="button" class="scrim" data-action="drawer-close" aria-label="Fechar menu" tabindex="-1"></button>'+
+   '<div class="content">'+
+     '<header class="topbar"><div class="topbar-in">'+
+       '<button type="button" class="icon-btn" data-action="drawer-open" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar">'+ico('menu',22)+'</button>'+
+       '<div class="spacer"></div>'+
+       '<div class="view-as"><span id="va-l">Ver como (só no protótipo)</span><div class="seg" role="group" aria-labelledby="va-l">'+
+         [['representante','Representante','Rep.'],['administrador','Administrador','Admin'],['cliente','Cliente','Cliente']].map(function(x){return '<button type="button" data-action="perfil" data-v="'+x[0]+'" aria-pressed="'+(pf===x[0])+'" aria-label="'+x[1]+'"><span class="v-l" aria-hidden="true">'+x[1]+'</span><span class="v-s" aria-hidden="true">'+x[2]+'</span></button>';}).join('')+'</div></div>'+
+       '<div class="user"><div class="avatar" aria-hidden="true">'+uAv+'</div><div><b>'+esc(uNome)+'</b><small>'+uPerfil+'</small></div></div>'+
+     '</div></header>'+
+     '<main id="main" tabindex="-1"><div class="page">'+inner+'</div></main>'+
+   '</div></div>';
+}
+function head(o){
+  var c=o.crumbs?'<nav aria-label="Trilha"><ol class="crumbs">'+o.crumbs.map(function(x,i){return '<li'+(i===o.crumbs.length-1?' aria-current="page"':'')+'>'+(x[1]?'<a href="#'+x[1]+'">'+esc(x[0])+'</a>':esc(x[0]))+'</li>';}).join('')+'</ol></nav>':'';
+  return c+'<div class="ph"><div class="ph-t"><h1>'+esc(o.title)+'</h1>'+(o.badges?'<div class="ph-b">'+o.badges+'</div>':'')+(o.sub?'<p>'+o.sub+'</p>':'')+'</div>'+(o.actions?'<div class="ph-a">'+o.actions+'</div>':'')+'</div>';
+}
+function err(msg,id){return msg?'<div class="err" id="'+id+'">'+ico('alert',16)+'<span>'+esc(msg)+'</span></div>':'';}
+
+/* ========== login ========== */
+function viewLogin(){
+  return '<div class="login">'+
+   '<section class="login-brand"><div><h1 class="sr">MLP Vendas Técnicas</h1><div class="login-logo">'+logo(100)+'</div><p>Clientes, obras e orçamentos em um só lugar.</p></div>'+
+   '<small>Protótipo navegável do sistema de gestão da MLP Vendas Técnicas. Dados fictícios, sem autenticação real.</small></section>'+
+   '<section class="login-form"><form class="login-card" id="f-login" novalidate>'+
+     '<div><h2>Entrar</h2><p class="lead">Use o e-mail e a senha cadastrados pelo administrador.</p></div>'+
+     '<div class="field"><label for="l-email">E-mail</label><input class="input" id="l-email" name="email" type="email" autocomplete="username" value="'+esc(state.loginEmail)+'"></div>'+
+     (state.loginErr?'<div class="banner t-danger" role="alert" id="login-err" tabindex="-1">'+ico('lock',20)+'<div>'+esc(state.loginErr)+'</div></div>':'')+
+     '<div class="field"><label for="l-senha">Senha</label><div class="pw"><input class="input" id="l-senha" name="senha" type="password" autocomplete="current-password" value="senha-demo"><button type="button" data-action="toggle-pass" aria-controls="l-senha" aria-pressed="false">Mostrar</button></div></div>'+
+     '<fieldset class="fs"><legend class="lbl" style="font-size:13px;margin-bottom:8px">Entrar como (só no protótipo)</legend><div class="choice choice-3">'+
+       '<label class="opt"><input type="radio" name="lp" value="representante"'+(state.loginPerfil==='representante'?' checked':'')+'><span class="opt-box">Representante</span></label>'+
+       '<label class="opt"><input type="radio" name="lp" value="administrador"'+(state.loginPerfil==='administrador'?' checked':'')+'><span class="opt-box">Administrador</span></label>'+
+       '<label class="opt"><input type="radio" name="lp" value="cliente"'+(state.loginPerfil==='cliente'?' checked':'')+'><span class="opt-box">Cliente</span></label></div></fieldset>'+
+     '<div><button type="button" class="link" data-action="forgot">Esqueci minha senha</button></div>'+
+     '<button type="submit" class="btn btn-primary btn-block" style="min-height:52px;font-size:16px">Entrar</button>'+
+   '</form></section></div>';
+}
+
+/* ========== clientes: lista ========== */
+function clientesFiltrados(){
+  var f=state.fc,q=norm(f.q);
+  return state.clientes.filter(function(c){
+    if(f.status==='ativos'&&!c.ativo)return false;
+    if(f.status==='inativos'&&c.ativo)return false;
+    if(f.tipo!=='todos'&&c.tipo!==f.tipo)return false;
+    if(q&&norm(c.nome+' '+c.doc+' '+c.tel).indexOf(q)<0)return false;
+    return true;
+  }).sort(function(a,b){return norm(a.nome)<norm(b.nome)?-1:1;});
+}
+function listaClientes(){
+  var l=clientesFiltrados();
+  var n='<p class="count" aria-live="polite">'+l.length+(l.length===1?' cliente':' clientes')+'</p>';
+  if(!l.length)return n+'<div class="empty">'+ico('search',28)+'<b>Nenhum cliente encontrado</b><span>Ajuste a busca ou os filtros.</span><button type="button" class="btn btn-secondary" data-action="limpar-cli">Limpar filtros</button></div>';
+  return n+'<table class="tbl"><thead><tr><th scope="col">Cliente</th><th scope="col">Tipo</th><th scope="col">Telefone</th><th scope="col" class="n">Obras</th><th scope="col">Situação</th><th scope="col"><span class="sr">Abrir</span></th></tr></thead><tbody>'+
+   l.map(function(c){var no=obrasDe(c.id).length;
+    return '<tr><td class="c-main"><a class="rowlink" href="#cliente-'+c.id+'">'+esc(c.nome)+'</a><span class="sub num">'+esc(c.doc)+'</span></td>'+
+     '<td class="hide-sm">'+tipoNome(c.tipo)+'</td><td class="hide-sm num">'+esc(c.tel)+'</td><td class="hide-sm n num">'+no+'</td>'+
+     '<td class="c-status">'+statusPill(c.ativo)+'</td>'+
+     '<td class="only-sm">'+tipoNome(c.tipo)+' · '+esc(c.tel)+' · '+no+(no===1?' obra':' obras')+'</td>'+
+     '<td class="chev hide-sm">'+ico('right',18)+'</td></tr>';}).join('')+'</tbody></table>';
+}
+function viewClientes(){
+  var f=state.fc;
+  var inner=head({title:'Clientes',sub:'Pessoas físicas e construtoras atendidas pela MLP.',actions:'<a class="btn btn-primary" href="#cliente-novo">'+ico('plus')+'Novo cliente</a>'})+
+  '<section class="card" aria-label="Lista de clientes"><div class="toolbar">'+
+   '<div class="search">'+ico('search',18)+'<label class="sr" for="q-cli">Buscar cliente por nome, CPF/CNPJ ou telefone</label><input class="input" id="q-cli" type="search" autocomplete="off" placeholder="Buscar cliente" value="'+esc(f.q)+'"></div>'+
+   '<div class="tool-sel"><label class="sr" for="tipo-cli">Tipo de cliente</label><select class="select" id="tipo-cli"><option value="todos">Todos os tipos</option><option value="pf"'+(f.tipo==='pf'?' selected':'')+'>Pessoa física</option><option value="construtora"'+(f.tipo==='construtora'?' selected':'')+'>Construtora</option></select></div>'+
+   '<div class="seg" role="group" aria-label="Situação">'+[['ativos','Ativos'],['inativos','Inativos'],['todos','Todos']].map(function(x){return '<button type="button" data-action="seg-cli" data-v="'+x[0]+'" aria-pressed="'+(f.status===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+  '</div><div id="list-cli">'+listaClientes()+'</div></section>';
+  return shell(inner,'clientes');
+}
+
+/* ========== clientes: detalhe ========== */
+function viewCliente(id){
+  var c=cli(id);if(!c)return shell(head({title:'Cliente não encontrado',crumbs:[['Clientes','clientes'],['Não encontrado']]}),'clientes');
+  var obs=obrasDe(id),acts='';
+  if(!c.eliminado)acts+='<a class="btn btn-secondary" href="#cliente-'+id+'-editar">'+ico('pencil')+'Alterar</a>';
+  acts+=c.ativo?'<button type="button" class="btn btn-warn" data-action="inativar-cli" data-id="'+id+'">'+ico('archive')+'Inativar</button>':'<button type="button" class="btn btn-secondary" data-action="reativar-cli" data-id="'+id+'">'+ico('restore')+'Reativar</button>';
+  var dados=c.eliminado?
+    '<div class="card-b"><div class="banner t-danger">'+ico('shieldx',20)+'<div>Dados pessoais eliminados em '+esc(c.eliminado)+'. Obras, orçamentos e entregas continuam registrados de forma anonimizada.</div></div></div>':
+    '<dl class="kv"><div><dt>Tipo</dt><dd>'+tipoNome(c.tipo)+'</dd></div><div><dt>'+(c.tipo==='pf'?'CPF':'CNPJ')+'</dt><dd class="num">'+esc(c.doc)+'</dd></div>'+
+    '<div><dt>Telefone</dt><dd class="num">'+esc(c.tel)+'</dd></div><div><dt>E-mail</dt><dd>'+esc(c.email||'—')+'</dd></div></dl>';
+  var obrasHtml=obs.length?'<ul class="minilist">'+obs.map(function(o){return '<li><div class="grow"><a class="rowlink" href="#obra-'+o.id+'">'+esc(o.nome)+'</a><span class="sub">'+esc(o.cidade)+' · '+o.unidades+(o.unidades===1?' unidade':' unidades')+'</span></div>'+faseBadge(o.fase)+'</li>';}).join('')+'</ul>':
+    '<div class="empty">'+ico('obra',28)+'<b>Nenhuma obra cadastrada</b><span>Cadastre a primeira obra deste cliente.</span></div>';
+  var priv;
+  if(c.eliminado)priv='<div class="card-b note">'+ico('shield',18)+'<span>Os dados pessoais deste titular já foram eliminados. A ação ficou registrada no log de auditoria.</span></div>';
+  else if(isAdmin())priv='<div class="card-b" style="display:flex;flex-direction:column;gap:14px"><p>A pedido do titular, o Administrador pode eliminar os dados pessoais deste cliente (Lei 13.709/2018, art. 18).</p><button type="button" class="btn btn-warn" data-action="eliminar-cli" data-id="'+id+'">'+ico('shieldx')+'Eliminar dados pessoais</button></div>';
+  else priv='<div class="card-b note">'+ico('info',18)+'<span>A eliminação de dados pessoais, a pedido do titular, é feita pelo Administrador. Use “Ver como” para conhecer essa tela.</span></div>';
+  var inner=head({crumbs:[['Clientes','clientes'],[c.nome]],title:c.nome,badges:'<span class="pill t-info">'+tipoNome(c.tipo)+'</span>'+statusPill(c.ativo),actions:acts})+
+   '<div class="grid-2"><div class="stack">'+
+     '<section class="card"><div class="card-h"><h2>Dados do cliente</h2></div>'+dados+'</section>'+
+     '<section class="card"><div class="card-h"><h2>Obras do cliente</h2><button type="button" class="btn btn-secondary" data-action="nova-obra-cli" data-id="'+id+'"'+(c.ativo?'':' disabled')+'>'+ico('plus')+'Nova obra</button></div>'+obrasHtml+'</section>'+
+   '</div><div class="stack"><section class="card"><div class="card-h"><h2>Privacidade (LGPD)</h2></div>'+priv+'</section></div></div>';
+  return shell(inner,'clientes');
+}
+
+/* ========== clientes: formulário ========== */
+function viewClienteForm(id,v,e){
+  var edit=!!id,c=edit?cli(id):null;
+  if(edit&&(!c||c.eliminado))return shell(head({title:'Cliente não encontrado',crumbs:[['Clientes','clientes'],['Não encontrado']]}),'clientes');
+  v=v||(edit?{tipo:c.tipo,nome:c.nome,doc:c.doc,tel:c.tel,email:c.email}:{tipo:'construtora',nome:'',doc:'',tel:'',email:''});
+  e=e||{};
+  var pf=v.tipo==='pf';
+  function fld(k,label,extra){var inv=e[k]?' aria-invalid="true" aria-describedby="e-'+k+'"':'';
+    return '<div class="field'+(extra&&extra.wide?' wide':'')+'"><label for="f-'+k+'">'+label+(extra&&extra.opt?' <span class="hint">(opcional)</span>':' <span class="req" aria-hidden="true">*</span>')+'</label>'+
+     '<input class="input" id="f-'+k+'" name="'+k+'" type="'+((extra&&extra.type)||'text')+'" value="'+esc(v[k])+'" '+((extra&&extra.attrs)||'')+inv+'>'+
+     (extra&&extra.hint?'<span class="hint">'+extra.hint+'</span>':'')+err(e[k],'e-'+k)+'</div>';}
+  var inner=head({crumbs:[['Clientes','clientes'],edit?[c.nome,'cliente-'+id]:null,[edit?'Alterar':'Novo cliente']].filter(Boolean),title:edit?'Alterar cliente':'Novo cliente',sub:'Campos com * são obrigatórios.'})+
+  '<form class="card form" id="f-cliente" data-id="'+(id||'')+'" novalidate style="max-width:820px"><div class="card-b" style="display:flex;flex-direction:column;gap:22px">'+
+   '<fieldset class="fs"><legend>Tipo de cliente</legend><div class="choice">'+
+     '<label class="opt"><input type="radio" name="tipo" value="pf"'+(pf?' checked':'')+'><span class="opt-box">'+ico('user',20)+'<span>Pessoa física<small>Proprietário do imóvel</small></span></span></label>'+
+     '<label class="opt"><input type="radio" name="tipo" value="construtora"'+(!pf?' checked':'')+'><span class="opt-box">'+ico('factory',20)+'<span>Construtora<small>Empresa responsável pela obra</small></span></span></label>'+
+   '</div></fieldset>'+
+   '<fieldset class="fs"><legend>Dados do cliente</legend><div class="fgrid">'+
+     fld('nome','<span id="lbl-nome">'+(pf?'Nome completo':'Razão social')+'</span>',{wide:true,attrs:'autocomplete="off"'})+
+     fld('doc','<span id="lbl-doc">'+(pf?'CPF':'CNPJ')+'</span>',{attrs:'inputmode="numeric" autocomplete="off" data-mask="doc"',hint:'<span id="hint-doc">'+(pf?'Ex.: 000.000.000-00':'Ex.: 00.000.000/0000-00')+'</span>'})+
+     fld('tel','Telefone',{type:'tel',attrs:'inputmode="tel" autocomplete="off" data-mask="tel"',hint:'Ex.: (15) 99999-0000'})+
+     fld('email','E-mail',{type:'email',opt:true,wide:true,attrs:'autocomplete="off"'})+
+   '</div></fieldset>'+
+   '<div class="form-a"><button type="submit" class="btn btn-primary">'+(edit?'Salvar alterações':'Cadastrar cliente')+'</button><a class="btn btn-secondary" href="#'+(edit?'cliente-'+id:'clientes')+'">Cancelar</a></div>'+
+  '</div></form>';
+  return shell(inner,'clientes');
+}
+function submitCliente(form){
+  var id=form.getAttribute('data-id')?+form.getAttribute('data-id'):null;
+  var fd=new FormData(form),v={tipo:fd.get('tipo')||'construtora',nome:String(fd.get('nome')||'').trim(),doc:String(fd.get('doc')||'').trim(),tel:String(fd.get('tel')||'').trim(),email:String(fd.get('email')||'').trim()};
+  var e={},pf=v.tipo==='pf';
+  if(!v.nome)e.nome=pf?'Informe o nome completo.':'Informe a razão social.';
+  if(digits(v.doc).length!==(pf?11:14))e.doc=pf?'Informe um CPF com 11 dígitos.':'Informe um CNPJ com 14 dígitos.';
+  else if(state.clientes.some(function(c){return c.id!==id&&digits(c.doc)===digits(v.doc);}))e.doc='Já existe um cliente com este '+(pf?'CPF':'CNPJ')+'.';
+  if(digits(v.tel).length<10)e.tel='Informe um telefone com DDD.';
+  if(v.email&&!emailOk(v.email))e.email='Informe um e-mail válido, como nome@empresa.com.br.';
+  if(Object.keys(e).length){mount(viewClienteForm(id,v,e));var f=$('[aria-invalid="true"]');if(f)f.focus();return;}
+  if(id){var c=cli(id);c.tipo=v.tipo;c.nome=v.nome;c.doc=v.doc;c.tel=v.tel;c.email=v.email;toast('Cliente alterado com sucesso');go('cliente-'+id);}
+  else{var nid=state.nextC++;state.clientes.push({id:nid,tipo:v.tipo,nome:v.nome,doc:v.doc,tel:v.tel,email:v.email,ativo:true,eliminado:null});toast('Cliente cadastrado com sucesso');go('cliente-'+nid);}
+}
+
+/* ========== obras: lista ========== */
+function obrasFiltradas(){
+  var f=state.fo,q=norm(f.q);
+  return state.obras.filter(function(o){
+    if(f.status==='ativas'&&!o.ativo)return false;
+    if(f.status==='inativas'&&o.ativo)return false;
+    if(f.fase!=='todas'&&o.fase!==f.fase)return false;
+    if(q&&norm(o.nome+' '+o.cidade+' '+nomeCli(o.clienteId)).indexOf(q)<0)return false;
+    return true;
+  }).sort(function(a,b){return norm(a.nome)<norm(b.nome)?-1:1;});
+}
+function listaObras(){
+  var l=obrasFiltradas();
+  var n='<p class="count" aria-live="polite">'+l.length+(l.length===1?' obra':' obras')+'</p>';
+  if(!l.length)return n+'<div class="empty">'+ico('search',28)+'<b>Nenhuma obra encontrada</b><span>Ajuste a busca ou os filtros.</span><button type="button" class="btn btn-secondary" data-action="limpar-obra">Limpar filtros</button></div>';
+  return n+'<table class="tbl"><thead><tr><th scope="col">Obra</th><th scope="col">Cliente</th><th scope="col">Cidade</th><th scope="col">Fase</th><th scope="col" class="n">Unid.</th><th scope="col">Representante</th><th scope="col">Situação</th></tr></thead><tbody>'+
+   l.map(function(o){
+    return '<tr><td class="c-main"><a class="rowlink" href="#obra-'+o.id+'">'+esc(o.nome)+'</a></td>'+
+     '<td class="hide-sm">'+esc(nomeCli(o.clienteId))+'</td><td class="hide-sm">'+esc(o.cidade)+'</td><td class="hide-sm">'+faseBadge(o.fase)+'</td>'+
+     '<td class="hide-sm n num">'+o.unidades+'</td><td class="hide-sm">'+esc(o.rep)+'</td>'+
+     '<td class="c-status">'+statusPill(o.ativo,true)+'</td>'+
+     '<td class="only-sm">'+esc(nomeCli(o.clienteId))+' · '+esc(o.cidade)+'</td><td class="only-sm">'+faseBadge(o.fase)+'</td></tr>';}).join('')+'</tbody></table>';
+}
+function viewObras(){
+  var f=state.fo;
+  var inner=head({title:'Obras',sub:'Obras em andamento, com cliente, fase e representante responsável.',actions:'<a class="btn btn-primary" href="#obra-nova">'+ico('plus')+'Nova obra</a>'})+
+  '<section class="card" aria-label="Lista de obras"><div class="toolbar">'+
+   '<div class="search">'+ico('search',18)+'<label class="sr" for="q-obra">Buscar obra por nome, cliente ou cidade</label><input class="input" id="q-obra" type="search" autocomplete="off" placeholder="Buscar obra" value="'+esc(f.q)+'"></div>'+
+   '<div class="tool-sel"><label class="sr" for="fase-obra">Fase da obra</label><select class="select" id="fase-obra"><option value="todas">Todas as fases</option>'+FASES.map(function(x){return '<option value="'+x.id+'"'+(f.fase===x.id?' selected':'')+'>'+x.nome+'</option>';}).join('')+'</select></div>'+
+   '<div class="seg" role="group" aria-label="Situação">'+[['ativas','Ativas'],['inativas','Inativas'],['todas','Todas']].map(function(x){return '<button type="button" data-action="seg-obra" data-v="'+x[0]+'" aria-pressed="'+(f.status===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+  '</div><div id="list-obra">'+listaObras()+'</div></section>';
+  return shell(inner,'obras');
+}
+
+/* ========== obras: detalhe ========== */
+function orcCardObra(o){
+  if(isAdmin())return '';
+  var os=orcsDe(o.id).sort(function(a,b){return b.numero-a.numero;});
+  var btn=o.ativo?'<button type="button" class="btn btn-primary" data-action="novo-orc-obra" data-id="'+o.id+'">'+ico('plus')+'Criar orçamento</button>':'';
+  var corpo=os.length?'<ul class="minilist">'+os.map(function(x){var v=vig(x);
+    return '<li><div class="grow"><a class="rowlink" href="#orcamento-'+x.id+'">Orçamento nº '+x.numero+'</a><span class="sub">'+esc(repr(x.repId).nome)+' · v'+v.n+' · '+brl(tot(v))+'</span></div>'+stPill(x.status)+'</li>';}).join('')+'</ul>'
+    :'<div class="empty">'+ico('file',28)+'<b>Nenhum orçamento nesta obra</b><span>'+(o.ativo?'Crie o primeiro orçamento para começar o histórico de versões.':'Reative a obra para criar orçamentos.')+'</span></div>';
+  return '<section class="card"><div class="card-h"><h2>Orçamentos da obra</h2>'+btn+'</div>'+corpo+'</section>';
+}
+function viewObra(id){
+  var o=obra(id);if(!o)return shell(head({title:'Obra não encontrada',crumbs:[['Obras','obras'],['Não encontrada']]}),'obras');
+  var acts='<a class="btn btn-secondary" href="#obra-'+id+'-editar">'+ico('pencil')+'Alterar</a>'+
+    (o.ativo?'<button type="button" class="btn btn-warn" data-action="inativar-obra" data-id="'+id+'">'+ico('archive')+'Inativar</button>':'<button type="button" class="btn btn-secondary" data-action="reativar-obra" data-id="'+id+'">'+ico('restore')+'Reativar</button>');
+  var k=o.comprador,comp;
+  if(k.eliminado)comp='<div class="card-b" style="display:flex;flex-direction:column;gap:12px"><div class="banner t-danger">'+ico('shieldx',20)+'<div>Dados pessoais do contato eliminados em '+esc(k.eliminado)+'.</div></div></div>';
+  else comp='<dl class="kv" style="grid-template-columns:minmax(0,1fr)"><div><dt>Nome</dt><dd>'+esc(k.nome||'—')+'</dd></div><div><dt>Telefone</dt><dd class="num">'+esc(k.tel||'—')+'</dd></div><div><dt>E-mail</dt><dd>'+esc(k.email||'—')+'</dd></div></dl>'+
+    (isAdmin()?'<div class="card-b" style="padding-top:0"><button type="button" class="btn btn-warn" data-action="eliminar-comp" data-id="'+id+'">'+ico('shieldx')+'Eliminar dados pessoais</button></div>':'<div class="card-b note" style="padding-top:0">'+ico('info',18)+'<span>A eliminação de dados pessoais é feita pelo Administrador.</span></div>');
+  var inner=head({crumbs:[['Obras','obras'],[o.nome]],title:o.nome,badges:faseBadge(o.fase)+statusPill(o.ativo,true),sub:'Cliente: <a href="#cliente-'+o.clienteId+'"><b>'+esc(nomeCli(o.clienteId))+'</b></a>',actions:acts})+
+   '<div class="grid-2"><div class="stack">'+
+     '<section class="card"><div class="card-h"><h2>Dados da obra</h2></div><dl class="kv">'+
+       '<div class="wide"><dt>Endereço</dt><dd>'+esc(o.endereco)+'</dd></div><div><dt>Cidade</dt><dd>'+esc(o.cidade)+'</dd></div><div><dt>Padrão</dt><dd>'+esc(o.padrao)+'</dd></div>'+
+       '<div><dt>Nº de unidades</dt><dd class="num">'+o.unidades+'</dd></div><div><dt>Fase</dt><dd>'+esc(fase(o.fase).nome)+'</dd></div><div><dt>Representante responsável</dt><dd>'+esc(o.rep)+'</dd></div></dl></section>'+
+     orcCardObra(o)+
+   '</div><div class="stack"><section class="card"><div class="card-h"><h2>Contato do comprador</h2></div>'+comp+'</section></div></div>';
+  return shell(inner,'obras');
+}
+
+/* ========== obras: formulário ========== */
+function viewObraForm(id,v,e){
+  var edit=!!id,o=edit?obra(id):null;
+  if(edit&&!o)return shell(head({title:'Obra não encontrada',crumbs:[['Obras','obras'],['Não encontrada']]}),'obras');
+  if(!v){
+    if(edit)v={nome:o.nome,clienteId:String(o.clienteId),endereco:o.endereco,cidade:o.cidade,padrao:o.padrao,unidades:String(o.unidades),fase:o.fase,rep:o.rep,cnome:o.comprador.nome,ctel:o.comprador.tel,cemail:o.comprador.email};
+    else{v={nome:'',clienteId:state.prefillCliente?String(state.prefillCliente):'',endereco:'',cidade:'',padrao:'',unidades:'',fase:'projeto',rep:'Carla Nogueira',cnome:'',ctel:'',cemail:''};state.prefillCliente=null;}
+  }
+  e=e||{};
+  var elim=edit&&o.comprador.eliminado;
+  function inv(k){return e[k]?' aria-invalid="true" aria-describedby="e-'+k+'"':'';}
+  function txt(k,label,o2){o2=o2||{};return '<div class="field'+(o2.wide?' wide':'')+'"><label for="f-'+k+'">'+label+(o2.opt?' <span class="hint">(opcional)</span>':' <span class="req" aria-hidden="true">*</span>')+'</label><input class="input" id="f-'+k+'" name="'+k+'" type="'+(o2.type||'text')+'" value="'+esc(v[k])+'" autocomplete="off" '+(o2.attrs||'')+inv(k)+'>'+(o2.hint?'<span class="hint">'+o2.hint+'</span>':'')+err(e[k],'e-'+k)+'</div>';}
+  function sel(k,label,opts,ph){return '<div class="field"><label for="f-'+k+'">'+label+' <span class="req" aria-hidden="true">*</span></label><select class="select" id="f-'+k+'" name="'+k+'"'+inv(k)+'>'+(ph?'<option value="">'+ph+'</option>':'')+opts.map(function(x){return '<option value="'+esc(x[0])+'"'+(String(v[k])===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>';}).join('')+'</select>'+err(e[k],'e-'+k)+'</div>';}
+  var cliOpts=state.clientes.filter(function(c){return (c.ativo&&!c.eliminado)||(edit&&c.id===o.clienteId);}).sort(function(a,b){return norm(a.nome)<norm(b.nome)?-1:1;}).map(function(c){return [String(c.id),c.nome];});
+  var inner=head({crumbs:[['Obras','obras'],edit?[o.nome,'obra-'+id]:null,[edit?'Alterar':'Nova obra']].filter(Boolean),title:edit?'Alterar obra':'Nova obra',sub:'Campos com * são obrigatórios.'})+
+  '<form class="card form" id="f-obra" data-id="'+(id||'')+'" novalidate><div class="card-b" style="display:flex;flex-direction:column;gap:24px">'+
+   '<fieldset class="fs"><legend>Dados da obra</legend><div class="fgrid">'+
+     txt('nome','Nome da obra',{wide:true})+
+     sel('clienteId','Cliente',cliOpts,'Selecione o cliente')+
+     sel('rep','Representante responsável',repOpts(v.rep))+
+     txt('endereco','Endereço',{wide:true})+
+     txt('cidade','Cidade')+
+     sel('padrao','Padrão',PADROES.map(function(p){return [p,p];}),'Selecione o padrão')+
+     txt('unidades','Nº de unidades',{type:'number',attrs:'inputmode="numeric" min="1" step="1"'})+
+     sel('fase','Fase',FASES.map(function(x){return [x.id,x.nome];}))+
+   '</div></fieldset>'+
+   (elim?'<fieldset class="fs"><legend>Contato do comprador</legend><div class="banner t-danger">'+ico('shieldx',20)+'<div>Os dados pessoais deste contato foram eliminados e não podem ser editados.</div></div></fieldset>':
+   '<fieldset class="fs"><legend>Contato do comprador</legend><div class="fgrid">'+
+     txt('cnome','Nome',{wide:true})+txt('ctel','Telefone',{type:'tel',attrs:'inputmode="tel" data-mask="tel"',hint:'Ex.: (15) 99999-0000'})+txt('cemail','E-mail',{type:'email',opt:true})+
+   '</div></fieldset>')+
+   '<div class="form-a"><button type="submit" class="btn btn-primary">'+(edit?'Salvar alterações':'Cadastrar obra')+'</button><a class="btn btn-secondary" href="#'+(edit?'obra-'+id:'obras')+'">Cancelar</a></div>'+
+  '</div></form>';
+  return shell(inner,'obras');
+}
+function submitObra(form){
+  var id=form.getAttribute('data-id')?+form.getAttribute('data-id'):null,o=id?obra(id):null;
+  var fd=new FormData(form),g=function(k){return String(fd.get(k)||'').trim();};
+  var v={nome:g('nome'),clienteId:g('clienteId'),rep:g('rep'),endereco:g('endereco'),cidade:g('cidade'),padrao:g('padrao'),unidades:g('unidades'),fase:g('fase'),cnome:g('cnome'),ctel:g('ctel'),cemail:g('cemail')};
+  var elim=o&&o.comprador.eliminado,e={};
+  if(!v.nome)e.nome='Informe o nome da obra.';
+  if(!v.clienteId)e.clienteId='Selecione o cliente.';
+  if(!v.endereco)e.endereco='Informe o endereço.';
+  if(!v.cidade)e.cidade='Informe a cidade.';
+  if(!v.padrao)e.padrao='Selecione o padrão.';
+  if(!(parseInt(v.unidades,10)>=1))e.unidades='Informe um número de unidades maior que zero.';
+  if(!elim){
+    if(!v.cnome)e.cnome='Informe o nome do contato do comprador.';
+    if(digits(v.ctel).length<10)e.ctel='Informe um telefone com DDD.';
+    if(v.cemail&&!emailOk(v.cemail))e.cemail='Informe um e-mail válido, como nome@empresa.com.br.';
+  }
+  if(Object.keys(e).length){mount(viewObraForm(id,v,e));var f=$('[aria-invalid="true"]');if(f)f.focus();return;}
+  var dados={nome:v.nome,clienteId:+v.clienteId,endereco:v.endereco,cidade:v.cidade,padrao:v.padrao,unidades:parseInt(v.unidades,10),fase:v.fase,rep:v.rep};
+  if(o){for(var k in dados)o[k]=dados[k];if(!elim){o.comprador.nome=v.cnome;o.comprador.tel=v.ctel;o.comprador.email=v.cemail;}toast('Obra alterada com sucesso');go('obra-'+id);}
+  else{dados.id=state.nextO++;dados.ativo=true;dados.comprador={nome:v.cnome,tel:v.ctel,email:v.cemail,eliminado:null};state.obras.push(dados);toast('Obra cadastrada com sucesso');go('obra-'+dados.id);}
+}
+
+/* ========== orçamentos (RF09) ========== */
+var ST={pendente:{nome:'Pendente',tone:'warn',icon:'clock'},aprovado:{nome:'Aprovado',tone:'ok',icon:'check'},reprovado:{nome:'Reprovado',tone:'danger',icon:'x'}};
+function stPill(s){var x=ST[s];return '<span class="pill t-'+x.tone+'">'+ico(x.icon,14)+x.nome+'</span>';}
+function orc(id){return state.orcs.filter(function(o){return o.id===id;})[0];}
+function repr(id){return state.representadas.filter(function(r){return r.id===id;})[0];}
+function mat(id){return state.materiais.filter(function(m){return m.id===id;})[0];}
+function vig(o){return o.versoes.filter(function(v){return v.vigente;})[0];}
+function tot(v){return v.itens.reduce(function(s,i){return s+i.qtd*i.preco;},0);}
+function brl(n){return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function dt(iso){var p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+function hojeISO(){var d=new Date(),z=function(n){return (n<10?'0':'')+n;};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
+function clonaItens(it){return it.map(function(i){return {mid:i.mid,qtd:i.qtd,preco:i.preco};});}
+function orcsDe(oid){return state.orcs.filter(function(o){return o.obraId===oid;});}
+
+function difVersoes(a,b){
+  var ma={},mb={},add=0,rem=0,chg=0;
+  a.itens.forEach(function(i){ma[i.mid]=i;});b.itens.forEach(function(i){mb[i.mid]=i;});
+  b.itens.forEach(function(i){var x=ma[i.mid];if(!x)add++;else if(x.qtd!==i.qtd||x.preco!==i.preco)chg++;});
+  a.itens.forEach(function(i){if(!mb[i.mid])rem++;});
+  var d=tot(b)-tot(a);
+  return {add:add,rem:rem,chg:chg,pag:a.pag!==b.pag,delta:d,pct:tot(a)?d/tot(a)*100:0};
+}
+function difTexto(d){
+  var p=[],s=d.delta>0?'+':(d.delta<0?'−':'');
+  p.push(d.delta===0?'Total sem alteração':'Total '+s+brl(Math.abs(d.delta))+' ('+s+Math.abs(d.pct).toFixed(1).replace('.',',')+'%)');
+  if(d.add)p.push(d.add+(d.add===1?' item adicionado':' itens adicionados'));
+  if(d.rem)p.push(d.rem+(d.rem===1?' item removido':' itens removidos'));
+  if(d.chg)p.push(d.chg+(d.chg===1?' item alterado':' itens alterados'));
+  if(d.pag)p.push('condição de pagamento alterada');
+  return p.join(' · ');
+}
+function tabelaItens(v){
+  var rows=v.itens.map(function(i){var m=mat(i.mid),sub=i.qtd*i.preco;
+    return '<tr><td class="c-main"><b>'+esc(m.descricao)+'</b><span class="sub">'+esc(m.codigo)+'</span></td>'+
+      '<td class="hide-sm n num">'+i.qtd+' '+esc(m.unid||'un')+'</td><td class="hide-sm n num">'+brl(i.preco)+'</td><td class="hide-sm n num"><b>'+brl(sub)+'</b></td>'+
+      '<td class="only-sm">'+i.qtd+' '+esc(m.unid||'un')+' × '+brl(i.preco)+' = <b>'+brl(sub)+'</b></td></tr>';}).join('');
+  return '<table class="tbl"><thead><tr><th scope="col">Material</th><th scope="col" class="n">Qtd.</th><th scope="col" class="n">Valor unit.</th><th scope="col" class="n">Subtotal</th></tr></thead><tbody>'+rows+'</tbody>'+
+    '<tfoot><tr><td class="c-main">Total</td><td class="hide-sm"></td><td class="hide-sm"></td><td class="n num">'+brl(tot(v))+'</td></tr></tfoot></table>';
+}
+function viewRestrito(msg,quem){
+  return shell(head({title:'Acesso restrito',sub:(msg||'Orçamentos são criados e reavaliados pelo Representante (RF09).')+' Use “Ver como” no topo para trocar de perfil.'})+
+    '<div class="banner">'+ico('lock',20)+'<div>'+(quem||'O perfil Administrador não tem acesso a esta tela.')+'</div></div>','');
+}
+
+/* ----- lista ----- */
+function orcsFiltrados(){
+  var f=state.fq,q=norm(f.q);
+  return state.orcs.filter(function(o){
+    if(isCli()&&obra(o.obraId).clienteId!==state.clienteId)return false;
+    if(f.status!=='todos'&&o.status!==f.status)return false;
+    if(f.rep!=='todas'&&String(o.repId)!==f.rep)return false;
+    var ob=obra(o.obraId);
+    if(q&&norm(o.numero+' '+ob.nome+' '+nomeCli(ob.clienteId)).indexOf(q)<0)return false;
+    return true;
+  }).sort(function(a,b){return b.numero-a.numero;});
+}
+function listaOrcs(){
+  var l=orcsFiltrados();
+  var n='<p class="count" aria-live="polite">'+l.length+(l.length===1?' orçamento':' orçamentos')+'</p>';
+  if(!l.length)return n+'<div class="empty">'+ico('search',28)+'<b>Nenhum orçamento encontrado</b><span>Ajuste a busca ou os filtros.</span><button type="button" class="btn btn-secondary" data-action="limpar-orc">Limpar filtros</button></div>';
+  return n+'<table class="tbl"><thead><tr><th scope="col">Orçamento</th><th scope="col">Obra</th><th scope="col">Representada</th><th scope="col" class="n">Versão</th><th scope="col" class="n">Valor vigente</th><th scope="col">Atualizado</th><th scope="col">Status</th></tr></thead><tbody>'+
+   l.map(function(o){var ob=obra(o.obraId),v=vig(o);
+    return '<tr><td class="c-main"><a class="rowlink" href="#orcamento-'+o.id+'">Nº '+o.numero+'</a><span class="sub">'+ico('file',13)+' '+o.versoes.length+(o.versoes.length===1?' versão':' versões')+'</span></td>'+
+     '<td class="hide-sm">'+esc(ob.nome)+(isCli()?'':'<span class="sub">'+esc(nomeCli(ob.clienteId))+'</span>')+'</td><td class="hide-sm">'+esc(repr(o.repId).nome)+'</td>'+
+     '<td class="hide-sm n num">v'+v.n+'</td><td class="hide-sm n num"><b>'+brl(tot(v))+'</b></td><td class="hide-sm num">'+dt(v.data)+'</td>'+
+     '<td class="c-status">'+stPill(o.status)+'</td>'+
+     '<td class="only-sm"><b>'+esc(ob.nome)+'</b>'+(isCli()?'':' · '+esc(nomeCli(ob.clienteId)))+'</td>'+
+     '<td class="only-sm">'+esc(repr(o.repId).nome)+' · v'+v.n+' · <b>'+brl(tot(v))+'</b></td></tr>';}).join('')+'</tbody></table>';
+}
+function viewOrcs(){
+  var f=state.fq;
+  var inner=head(isCli()?{title:'Meus orçamentos',sub:'Orçamentos das suas obras. Abra um orçamento para conferir itens e valores e registrar a sua decisão.'}:{title:'Orçamentos',sub:'Orçamentos por obra, com o histórico de versões de cada um.',actions:'<a class="btn btn-primary" href="#orcamento-novo">'+ico('plus')+'Novo orçamento</a>'})+
+  '<section class="card" aria-label="Lista de orçamentos"><div class="toolbar">'+
+   '<div class="search">'+ico('search',18)+'<label class="sr" for="q-orc">Buscar orçamento por número, obra ou cliente</label><input class="input" id="q-orc" type="search" autocomplete="off" placeholder="Buscar orçamento" value="'+esc(f.q)+'"></div>'+
+   '<div class="tool-sel"><label class="sr" for="rep-orc">Representada</label><select class="select" id="rep-orc"><option value="todas">Todas as representadas</option>'+state.representadas.map(function(r){return '<option value="'+r.id+'"'+(f.rep===String(r.id)?' selected':'')+'>'+esc(r.nome)+'</option>';}).join('')+'</select></div>'+
+   '<div class="seg seg-4" role="group" aria-label="Status">'+[['todos','Todos'],['pendente','Pendentes'],['aprovado','Aprovados'],['reprovado','Reprovados']].map(function(x){return '<button type="button" data-action="seg-orc" data-v="'+x[0]+'" aria-pressed="'+(f.status===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+  '</div><div id="list-orc">'+listaOrcs()+'</div></section>';
+  return shell(inner,'orcamentos');
+}
+
+/* ----- detalhe ----- */
+function orcOk(o){return !!o&&(!isCli()||obra(o.obraId).clienteId===state.clienteId);}
+function naoAchou(){return shell(head({title:'Orçamento não encontrado',crumbs:[[isCli()?'Meus orçamentos':'Orçamentos','orcamentos'],['Não encontrado']]}),'orcamentos');}
+function decLinha(d){
+  if(!d)return '';
+  if(d.tipo==='aprovado')return '<span class="pill t-ok">'+ico('check',14)+'Aprovada em '+dt(d.data)+'</span><span>'+ico('file',15)+' '+esc(d.doc)+'</span>';
+  return '<span class="pill t-danger">'+ico('x',14)+'Reprovada em '+dt(d.data)+'</span>';
+}
+function viewOrc(id){
+  var o=orc(id);
+  if(!orcOk(o))return naoAchou();
+  var cl=isCli(),ob=obra(o.obraId),r=repr(o.repId),v=vig(o),bloq=o.status==='aprovado';
+  var acts='';
+  if(cl){
+    if(o.status==='pendente')acts+='<a class="btn btn-primary" href="#orcamento-'+id+'-aprovar">'+ico('check')+'Aprovar</a><a class="btn btn-warn" href="#orcamento-'+id+'-reprovar">'+ico('x')+'Reprovar</a>';
+  }else acts+=(bloq?'<button type="button" class="btn btn-secondary" disabled aria-describedby="lock-msg">'+ico('lock')+'Reavaliar</button>':'<a class="btn btn-primary" href="#orcamento-'+id+'-reavaliar">'+ico('refresh')+'Reavaliar</a>');
+  acts+='<a class="btn btn-secondary" href="#orcamento-'+id+'-versoes">'+ico('history')+'Histórico de versões</a>';
+  var decisao;
+  if(o.status==='aprovado')decisao='<dl class="kv" style="grid-template-columns:minmax(0,1fr)"><div><dt>Aprovado em</dt><dd>'+dt(o.decisao)+'</dd></div><div><dt>Documento assinado</dt><dd>'+ico('file',16)+' '+esc(o.doc)+'</dd></div></dl>';
+  else if(o.status==='reprovado')decisao='<div class="card-b" style="display:flex;flex-direction:column;gap:10px"><p><b>Reprovado em '+dt(o.decisao)+'.</b></p><p class="sub" style="font-weight:700">Motivo informado</p><blockquote class="quote">'+esc(o.motivo)+'</blockquote><p>'+(cl?'Aguarde uma nova versão do representante, que foi avisado da sua decisão.':'Use Reavaliar para ajustar itens, valores ou condições e gerar uma nova versão.')+'</p></div>';
+  else decisao='<div class="card-b note">'+ico('info',18)+'<span>'+(cl?'Aguardando a sua decisão sobre a versão vigente (v'+v.n+'). Use Aprovar ou Reprovar no topo da página.':'Aguardando a decisão do cliente. Você será notificado quando ele aprovar ou reprovar.')+'</span></div>';
+  var vlist=o.versoes.map(function(x){return '<li><div class="grow"><b>v'+x.n+'</b><span class="sub">'+dt(x.data)+' · '+brl(tot(x))+'</span></div>'+(x.vigente?'<span class="pill t-info">'+ico('check',14)+'Vigente</span>':'')+'</li>';}).join('');
+  var sub=cl?'Obra: <b>'+esc(ob.nome)+'</b> · Representada: <b>'+esc(r.nome)+'</b>':'Obra: <a href="#obra-'+ob.id+'"><b>'+esc(ob.nome)+'</b></a> · Cliente: <a href="#cliente-'+ob.clienteId+'"><b>'+esc(nomeCli(ob.clienteId))+'</b></a> · Representada: <b>'+esc(r.nome)+'</b>';
+  var inner=head({crumbs:[[cl?'Meus orçamentos':'Orçamentos','orcamentos'],['Nº '+o.numero]],title:'Orçamento nº '+o.numero,
+      badges:stPill(o.status)+'<span class="pill t-info">Versão vigente: v'+v.n+'</span>',sub:sub,actions:acts})+
+    (bloq?'<div class="banner" id="lock-msg">'+ico('lock',20)+'<div>Orçamento aprovado não pode ser modificado. O histórico continua disponível para consulta.</div></div>':'')+
+    '<div class="grid-2"><div class="stack">'+
+      '<section class="card"><div class="card-h"><h2>Versão vigente (v'+v.n+')</h2><span class="hint">'+dt(v.data)+'</span></div>'+tabelaItens(v)+
+        '<dl class="kv" style="border-top:1px solid var(--line)"><div class="wide"><dt>Condições de pagamento</dt><dd>'+esc(v.pag)+'</dd></div></dl></section>'+
+    (cl?'':entCard(o))+'</div><div class="stack">'+
+      '<section class="card"><div class="card-h"><h2>Decisão do cliente</h2></div>'+decisao+'</section>'+
+      '<section class="card"><div class="card-h"><h2>Versões</h2></div><ul class="minilist">'+vlist+'</ul><div class="card-b" style="padding-top:12px"><a class="btn btn-secondary btn-block" href="#orcamento-'+id+'-versoes">'+ico('history')+'Ver histórico completo</a></div></section>'+
+    '</div></div>';
+  return shell(inner,'orcamentos');
+}
+
+/* ----- histórico de versões (ordem cronológica) ----- */
+function viewOrcVersoes(id){
+  var o=orc(id);
+  if(!orcOk(o))return naoAchou();
+  var cl=isCli(),ob=obra(o.obraId);
+  var cards=o.versoes.map(function(x,i){
+    var d=i>0?difVersoes(o.versoes[i-1],x):null;
+    return '<section class="card ver'+(x.vigente?' ver-on':'')+'"><div class="card-h"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2>Versão '+x.n+'</h2>'+(x.vigente?'<span class="pill t-info">'+ico('check',14)+'Vigente</span>':'')+'</div><span class="num"><b>'+brl(tot(x))+'</b> · '+dt(x.data)+'</span></div>'+
+      '<div class="card-b" style="display:flex;flex-direction:column;gap:12px"><p>'+(d?difTexto(d)+' em relação à v'+o.versoes[i-1].n+'.':'Versão inicial do orçamento.')+'</p>'+
+      (x.dec?'<div class="dec">'+decLinha(x.dec)+'</div>'+(x.dec.tipo==='reprovado'?'<blockquote class="quote">'+esc(x.dec.motivo)+'</blockquote>':''):'')+
+      '<details'+(x.vigente?' open':'')+'><summary>Itens e condições desta versão</summary><div class="det-in">'+tabelaItens(x)+'<p class="det-pag"><b>Condições de pagamento:</b> '+esc(x.pag)+'</p></div></details></div></section>';}).join('');
+  var inner=head({crumbs:[[cl?'Meus orçamentos':'Orçamentos','orcamentos'],['Nº '+o.numero,'orcamento-'+id],['Histórico de versões']],title:'Histórico de versões',
+      sub:'Orçamento nº '+o.numero+' · '+esc(ob.nome)+'. Da mais antiga para a mais recente; a versão vigente está destacada.',actions:'<a class="btn btn-secondary" href="#orcamento-'+id+'">'+ico('left')+'Voltar ao orçamento</a>'})+
+    '<div class="vers">'+cards+'</div>';
+  return shell(inner,'orcamentos');
+}
+
+/* ----- RF10: aprovar / reprovar (Cliente) ----- */
+function viewOrcDecisao(id,tipo){
+  if(!isCli())return shell(head({title:'Acesso restrito',sub:'Somente o Cliente aprova ou reprova orçamentos (RF10). Use “Ver como” no topo para trocar de perfil.'})+'<div class="banner">'+ico('lock',20)+'<div>Este perfil não tem acesso a esta tela.</div></div>','');
+  var o=orc(id);if(!orcOk(o))return naoAchou();
+  var ap=tipo==='aprovar',E=state.decErr||{},v=vig(o),ob=obra(o.obraId);
+  if(o.status!=='pendente')return shell(head({crumbs:[['Meus orçamentos','orcamentos'],['Nº '+o.numero,'orcamento-'+id],[ap?'Aprovar':'Reprovar']],title:ap?'Aprovar orçamento':'Reprovar orçamento'})+
+    '<div class="banner">'+ico('info',20)+'<div>Este orçamento já foi '+(o.status==='aprovado'?'aprovado':'reprovado')+' e a decisão não pode ser alterada por aqui.</div></div><div><a class="btn btn-secondary" href="#orcamento-'+id+'">'+ico('left')+'Voltar ao orçamento</a></div>','orcamentos');
+  var campo=ap?
+   '<div class="field"><label for="d-doc">Documento de aprovação assinado <span class="req" aria-hidden="true">*</span></label><input class="input" id="d-doc" type="file" accept=".pdf,.jpg,.jpeg,.png"'+(E.doc?' aria-invalid="true" aria-describedby="e-doc"':'')+'><span class="hint">PDF, JPG ou PNG, até 5 MB.</span>'+err(E.doc,'e-doc')+'</div>':
+   '<div class="field"><label for="d-motivo">Motivo da reprovação <span class="req" aria-hidden="true">*</span></label><textarea class="input ta" id="d-motivo" rows="4" maxlength="500"'+(E.motivo?' aria-invalid="true" aria-describedby="e-motivo"':'')+'>'+esc(state.decMotivo)+'</textarea><span class="hint">O representante recebe este motivo e ele fica registrado no histórico.</span>'+err(E.motivo,'e-motivo')+'</div>';
+  var inner=head({crumbs:[['Meus orçamentos','orcamentos'],['Nº '+o.numero,'orcamento-'+id],[ap?'Aprovar':'Reprovar']],title:(ap?'Aprovar':'Reprovar')+' orçamento nº '+o.numero,
+      sub:ap?'Anexe o documento assinado e confirme. Depois de aprovado, o orçamento não pode mais ser modificado.':'Informe o motivo para o representante poder revisar o orçamento.'})+
+   '<form class="orc-form" id="f-dec" data-id="'+id+'" data-tipo="'+tipo+'" novalidate>'+
+   '<section class="card"><div class="card-h"><h2>Versão vigente (v'+v.n+')</h2></div><dl class="kv">'+
+     '<div><dt>Obra</dt><dd>'+esc(ob.nome)+'</dd></div><div><dt>Representada</dt><dd>'+esc(repr(o.repId).nome)+'</dd></div>'+
+     '<div><dt>Valor total</dt><dd class="num">'+brl(tot(v))+'</dd></div><div><dt>Condições de pagamento</dt><dd>'+esc(v.pag)+'</dd></div></dl>'+
+     '<div class="card-b" style="padding-top:0"><a href="#orcamento-'+id+'">Ver itens e valores</a></div></section>'+
+   '<section class="card"><div class="card-h"><h2>'+(ap?'Aprovação':'Reprovação')+'</h2></div><div class="card-b">'+campo+'</div></section>'+
+   '<div class="form-a"><button type="submit" class="btn '+(ap?'btn-primary':'btn-danger')+'">'+(ap?'Confirmar aprovação':'Confirmar reprovação')+'</button><a class="btn btn-secondary" href="#orcamento-'+id+'">Cancelar</a></div></form>';
+  return shell(inner,'orcamentos');
+}
+function notificar(o,tipo){
+  var ob=obra(o.obraId);
+  state.notifs.unshift({id:state.nextNotif++,orcId:o.id,rep:ob.rep,data:hojeISO(),lida:false,
+    texto:'Orçamento nº '+o.numero+' foi '+(tipo==='aprovado'?'aprovado':'reprovado')+' por '+nomeCli(ob.clienteId)+' (versão v'+vig(o).n+').'});
+}
+function abrirNotifs(){
+  var l=state.notifs.filter(function(n){return n.rep==='Carla Nogueira';});
+  var corpo=l.length?'<ul class="notif">'+l.map(function(n){return '<li'+(n.lida?'':' class="new"')+'><a href="#orcamento-'+n.orcId+'">'+esc(n.texto)+'</a><small>'+dt(n.data)+(n.lida?'':' · nova')+'</small></li>';}).join('')+'</ul>':'<p>Nenhuma notificação por enquanto. Você será avisado quando um cliente aprovar ou reprovar um orçamento.</p>';
+  openModal({title:'Notificações',body:corpo,ok:'Marcar como lidas',cancel:'Fechar',onOk:function(){state.notifs.forEach(function(n){n.lida=true;});render();}});
+}
+function submitDec(form){
+  var id=+form.getAttribute('data-id'),tipo=form.getAttribute('data-tipo'),o=orc(id),v=vig(o),E={};
+  if(!orcOk(o)||o.status!=='pendente')return;
+  if(tipo==='aprovar'){
+    var f=$('#d-doc').files[0];
+    if(!f)E.doc='Anexe o documento de aprovação assinado.';
+    else if(!/\.(pdf|jpe?g|png)$/i.test(f.name))E.doc='Formato inválido. Envie um arquivo PDF, JPG ou PNG.';
+    else if(f.size>5*1024*1024)E.doc='O arquivo passa de 5 MB. Envie um arquivo menor.';
+    if(Object.keys(E).length){state.decErr=E;mount(viewOrcDecisao(id,tipo));var x=$('[aria-invalid="true"]');if(x)x.focus();return;}
+    state.decErr=null;var nome=f.name;var er=$('#e-doc');if(er)er.parentNode.removeChild(er);$('#d-doc').removeAttribute('aria-invalid');
+    openModal({title:'Aprovar o orçamento nº '+o.numero+'?',
+      body:'<p>Versão <b>v'+v.n+'</b> · <b>'+brl(tot(v))+'</b></p><ul><li>Documento anexado: '+esc(nome)+'.</li><li>Depois de aprovado, o orçamento não pode mais ser modificado.</li><li>O representante será notificado.</li></ul>',
+      ok:'Aprovar orçamento',onOk:function(){
+        v.dec={tipo:'aprovado',data:hojeISO(),doc:nome};o.status='aprovado';o.decisao=hojeISO();o.doc=nome;
+        notificar(o,'aprovado');state.decErr=null;toast('Orçamento aprovado com sucesso');go('orcamento-'+id);}});
+  }else{
+    var m=$('#d-motivo').value.trim();state.decMotivo=$('#d-motivo').value;
+    if(m.length<10)E.motivo=m?'Descreva o motivo com pelo menos 10 caracteres.':'Informe o motivo da reprovação.';
+    if(Object.keys(E).length){state.decErr=E;mount(viewOrcDecisao(id,tipo));var y=$('[aria-invalid="true"]');if(y)y.focus();return;}
+    v.dec={tipo:'reprovado',data:hojeISO(),motivo:m};o.status='reprovado';o.decisao=hojeISO();o.motivo=m;
+    notificar(o,'reprovado');state.decErr=null;state.decMotivo='';toast('Orçamento reprovado. O representante foi notificado.');go('orcamento-'+id);
+  }
+}
+
+/* ----- formulário: criar e reavaliar ----- */
+function iniciaDraft(kind,o){
+  var key=location.hash;
+  if(state.draft&&state.draft.key===key)return;
+  state.draftErr=null;
+  if(kind==='reav'){var v=vig(o);state.draft={key:key,tipo:'reav',oid:o.id,obraId:String(o.obraId),repId:String(o.repId),pag:v.pag,itens:clonaItens(v.itens),base:v};}
+  else{state.draft={key:key,tipo:'novo',obraId:state.prefillObra?String(state.prefillObra):'',obraLock:!!state.prefillObra,repId:'',pag:'',itens:[]};state.prefillObra=null;}
+}
+function editorItens(){
+  var d=state.draft,E=(state.draftErr&&state.draftErr.rows)||{},edit=d.tipo==='reav';
+  if(!d.repId)return '<div class="empty" style="padding:24px 12px">'+ico('factory',26)+'<b>Escolha a representada primeiro</b><span>Cada representada tem os seus próprios materiais e preços.</span></div>';
+  var usados=d.itens.map(function(i){return String(i.mid);});
+  var mats=state.materiais.filter(function(m){return m.repId===+d.repId&&(m.ativo||usados.indexOf(String(m.id))>-1);});
+  var rows=d.itens.map(function(it,ix){
+    var e=E[ix]||{};
+    var opts='<option value="">Selecione o material</option>'+mats.map(function(m){
+      var usado=usados.indexOf(String(m.id))>-1&&String(it.mid)!==String(m.id);
+      return '<option value="'+m.id+'"'+(String(it.mid)===String(m.id)?' selected':'')+(usado?' disabled':'')+'>'+esc(m.codigo+' · '+m.descricao)+'</option>';}).join('');
+    return '<div class="irow" role="group" aria-label="Item '+(ix+1)+'">'+
+      '<div class="field i-mat"><label for="im-'+ix+'">Material</label><select class="select" id="im-'+ix+'" data-f="mid" data-ix="'+ix+'"'+(e.mid?' aria-invalid="true" aria-describedby="ie-m'+ix+'"':'')+'>'+opts+'</select>'+err(e.mid,'ie-m'+ix)+'</div>'+
+      '<div class="field"><label for="iq-'+ix+'">Qtd.</label><input class="input num" id="iq-'+ix+'" type="number" min="1" step="1" inputmode="numeric" value="'+esc(it.qtd||'')+'" data-f="qtd" data-ix="'+ix+'"'+(e.qtd?' aria-invalid="true" aria-describedby="ie-q'+ix+'"':'')+'>'+err(e.qtd,'ie-q'+ix)+'</div>'+
+      '<div class="field"><label for="ip-'+ix+'">Valor unit. (R$)</label>'+(edit?'<input class="input num" id="ip-'+ix+'" type="number" min="0.01" step="0.01" inputmode="decimal" value="'+(it.preco?Number(it.preco).toFixed(2):'')+'" data-f="preco" data-ix="'+ix+'"'+(e.preco?' aria-invalid="true" aria-describedby="ie-p'+ix+'"':'')+'>':'<div class="ro num" id="ip-'+ix+'">'+(it.mid?brl(it.preco):'—')+'</div>')+err(e.preco,'ie-p'+ix)+'</div>'+
+      '<div class="field"><span class="lbl">Subtotal</span><div class="ro num" id="is-'+ix+'">'+brl((it.qtd||0)*(it.preco||0))+'</div></div>'+
+      '<button type="button" class="rm-btn" data-action="rm-item" data-ix="'+ix+'" aria-label="Remover item '+(ix+1)+'">'+ico('trash',18)+'<span class="rm-t">Remover item</span></button></div>';}).join('');
+  return rows+'<div><button type="button" class="btn btn-secondary" data-action="add-item">'+ico('plus')+'Adicionar item</button></div>'+
+    (!edit?'<p class="hint">O valor unitário vem do preço cadastrado do material (RF08). Ajustes de valor são feitos ao reavaliar.</p>':'');
+}
+function totaisHtml(){
+  var d=state.draft,t=d.itens.reduce(function(s,i){return s+(i.qtd||0)*(i.preco||0);},0);
+  var x='<div class="totbar"><span>Total '+(d.tipo==='reav'?'da nova versão':'do orçamento')+'</span><b id="d-total">'+brl(t)+'</b></div>';
+  if(d.tipo==='reav'){var b=tot(d.base),dl=t-b;x+='<p class="hint" id="d-delta">Versão vigente (v'+d.base.n+'): '+brl(b)+' · Diferença: '+(dl===0?'sem alteração':(dl>0?'+':'−')+brl(Math.abs(dl)))+'</p>';}
+  return x;
+}
+function viewOrcForm(kind,oid){
+  var rp=kind==='reav',o=rp?orc(oid):null;
+  if(rp&&!o)return shell(head({title:'Orçamento não encontrado',crumbs:[['Orçamentos','orcamentos'],['Não encontrado']]}),'orcamentos');
+  if(rp&&o.status==='aprovado')return shell(head({crumbs:[['Orçamentos','orcamentos'],['Nº '+o.numero,'orcamento-'+oid],['Reavaliar']],title:'Reavaliar orçamento'})+
+    '<div class="banner" id="lock-msg">'+ico('lock',20)+'<div>Orçamento aprovado não pode ser modificado. Não é possível criar nova versão.</div></div><div><a class="btn btn-secondary" href="#orcamento-'+oid+'">'+ico('left')+'Voltar ao orçamento</a></div>','orcamentos');
+  iniciaDraft(kind,o);
+  var d=state.draft,E=state.draftErr||{};
+  var obrasAt=state.obras.filter(function(x){return x.ativo;});
+  var ob=d.obraId?obra(+d.obraId):null;
+  var campos;
+  if(rp)campos='<div class="banner">'+ico('info',20)+'<div>Você está criando a <b>versão '+(o.versoes.length+1)+'</b> a partir da vigente (v'+d.base.n+'). As versões anteriores são preservadas.</div></div>'+
+    '<dl class="kv" style="padding:0"><div><dt>Obra</dt><dd>'+esc(ob.nome)+'</dd></div><div><dt>Representada</dt><dd>'+esc(repr(+d.repId).nome)+'</dd></div></dl>';
+  else campos='<div class="fgrid">'+
+    '<div class="field"><label for="o-obra">Obra <span class="req" aria-hidden="true">*</span></label><select class="select" id="o-obra"'+(d.obraLock?' disabled':'')+(E.obra?' aria-invalid="true" aria-describedby="e-obra"':'')+'><option value="">Selecione a obra</option>'+obrasAt.map(function(x){return '<option value="'+x.id+'"'+(String(x.id)===d.obraId?' selected':'')+'>'+esc(x.nome+' — '+nomeCli(x.clienteId))+'</option>';}).join('')+'</select>'+err(E.obra,'e-obra')+(d.obraLock?'<span class="hint">Obra escolhida na tela da obra.</span>':'')+'</div>'+
+    '<div class="field"><label for="o-rep">Representada <span class="req" aria-hidden="true">*</span></label><select class="select" id="o-rep"'+(E.rep?' aria-invalid="true" aria-describedby="e-rep"':'')+'><option value="">Selecione a representada</option>'+state.representadas.filter(function(r){return r.ativa;}).map(function(r){return '<option value="'+r.id+'"'+(String(r.id)===d.repId?' selected':'')+'>'+esc(r.nome)+'</option>';}).join('')+'</select>'+err(E.rep,'e-rep')+'</div></div>';
+  var pag='<div class="field"><label for="o-pag">Condições de pagamento <span class="req" aria-hidden="true">*</span></label><input class="input" id="o-pag" list="pag-sug" autocomplete="off" value="'+esc(d.pag)+'"'+(E.pag?' aria-invalid="true" aria-describedby="e-pag"':'')+'><datalist id="pag-sug"><option value="À vista"><option value="30 dias"><option value="30/60/90 dias"><option value="Entrada 30% + 30/60 dias"></datalist><span class="hint">Escolha uma sugestão ou escreva as condições combinadas.</span>'+err(E.pag,'e-pag')+'</div>';
+  var resumo=(E.geral||E.itens)?'<div class="banner t-danger" role="alert" id="orc-err">'+ico('alert',20)+'<div>'+esc(E.geral||E.itens)+'</div></div>':'';
+  var inner=head({crumbs:rp?[['Orçamentos','orcamentos'],['Nº '+o.numero,'orcamento-'+oid],['Reavaliar']]:[['Orçamentos','orcamentos'],['Novo orçamento']],
+      title:rp?'Reavaliar orçamento nº '+o.numero:'Novo orçamento',sub:rp?'Ajuste itens, valores ou condições e confirme a nova versão.':'Escolha a representada, adicione os materiais e informe as condições de pagamento.'})+
+  '<form class="orc-form" id="f-orc" novalidate>'+resumo+
+   '<section class="card"><div class="card-h"><h2>Dados do orçamento</h2></div><div class="card-b" style="display:flex;flex-direction:column;gap:16px">'+campos+pag+'</div></section>'+
+   '<section class="card"><div class="card-h"><h2>Itens</h2></div><div class="card-b" style="display:flex;flex-direction:column;gap:14px"><div id="itens-ed" style="display:flex;flex-direction:column;gap:14px">'+editorItens()+'</div></div></section>'+
+   '<div id="totais" style="display:flex;flex-direction:column;gap:8px">'+totaisHtml()+'</div>'+
+   '<div class="form-a"><button type="submit" class="btn btn-primary">'+(rp?'Confirmar nova versão':'Criar orçamento')+'</button><a class="btn btn-secondary" href="#'+(rp?'orcamento-'+oid:'orcamentos')+'">Cancelar</a></div></form>';
+  return shell(inner,'orcamentos');
+}
+function refreshItens(focusLast){
+  var el=$('#itens-ed');if(!el)return;el.innerHTML=editorItens();updTotais();
+  if(focusLast){var n=state.draft.itens.length-1,f=$('#im-'+n);if(f)f.focus();}
+}
+function updTotais(){var t=$('#totais');if(t)t.innerHTML=totaisHtml();}
+function clearErrFor(t){
+  var f=t.closest&&t.closest('.field');if(f){var e=f.querySelector('.err');if(e)e.parentNode.removeChild(e);}
+  t.removeAttribute('aria-invalid');
+  var E=state.draftErr;if(!E)return;
+  var map={'o-obra':'obra','o-rep':'rep','o-pag':'pag'};
+  if(map[t.id])delete E[map[t.id]];
+  var ix=t.getAttribute('data-ix'),fl=t.getAttribute('data-f');
+  if(ix!==null&&E.rows&&E.rows[ix]){delete E.rows[ix][fl];}
+  if(t.id==='o-rep'||fl==='mid'){delete E.itens;var b=$('#orc-err');if(b&&!E.geral)b.parentNode.removeChild(b);}
+}
+function onItem(t){
+  var d=state.draft,ix=+t.getAttribute('data-ix'),f=t.getAttribute('data-f'),it=d.itens[ix];if(!it)return;
+  if(f==='qtd'){var q=parseInt(t.value,10);it.qtd=isNaN(q)?0:q;}
+  else if(f==='preco'){var p=parseFloat(String(t.value).replace(',','.'));it.preco=isNaN(p)?0:p;}
+  var s=$('#is-'+ix);if(s)s.textContent=brl((it.qtd||0)*(it.preco||0));
+  updTotais();
+}
+function semMudanca(d){
+  var b=d.base;if(b.pag.trim()!==d.pag.trim())return false;if(b.itens.length!==d.itens.length)return false;
+  var m={};b.itens.forEach(function(i){m[i.mid]=i;});
+  return d.itens.every(function(i){var x=m[i.mid];return x&&x.qtd===i.qtd&&x.preco===i.preco;});
+}
+function submitOrc(){
+  var d=state.draft,E={},R={};
+  if(d.tipo==='novo'&&!d.obraId)E.obra='Selecione a obra.';
+  if(!d.repId)E.rep='Selecione a representada.';
+  if(!d.pag.trim())E.pag='Informe as condições de pagamento.';
+  if(d.repId&&!d.itens.length)E.itens='Adicione ao menos um item ao orçamento.';
+  d.itens.forEach(function(it,ix){var x={};if(!it.mid)x.mid='Selecione o material.';if(!(it.qtd>=1))x.qtd='Informe a quantidade.';if(it.mid&&!(it.preco>0))x.preco='Informe o valor.';if(Object.keys(x).length)R[ix]=x;});
+  if(Object.keys(R).length)E.rows=R;
+  if(!Object.keys(E).length&&d.tipo==='reav'&&semMudanca(d))E.geral='Altere itens, valores ou condições para gerar uma nova versão.';
+  if(Object.keys(E).length){state.draftErr=E;mount(viewOrcForm(d.tipo==='reav'?'reav':'novo',d.oid));
+    var f=$('[aria-invalid="true"]')||$('#orc-err');if(f){if(!f.hasAttribute('tabindex')&&f.id==='orc-err')f.setAttribute('tabindex','-1');f.focus();}return;}
+  if(d.tipo==='reav'){
+    var o=orc(d.oid);o.versoes.forEach(function(v){v.vigente=false;});
+    o.versoes.push({n:o.versoes.length+1,data:hojeISO(),itens:clonaItens(d.itens),pag:d.pag.trim(),vigente:true});
+    if(o.status==='reprovado'){o.status='pendente';o.decisao=null;o.motivo=null;}
+    state.draft=null;toast('Nova versão criada com sucesso');go('orcamento-'+o.id);
+  }else{
+    var n={id:state.nextOrcId++,numero:state.nextNum++,obraId:+d.obraId,repId:+d.repId,status:'pendente',decisao:null,doc:null,
+      versoes:[{n:1,data:hojeISO(),itens:clonaItens(d.itens),pag:d.pag.trim(),vigente:true}]};
+    state.orcs.push(n);state.draft=null;toast('Orçamento criado com sucesso');go('orcamento-'+n.id);
+  }
+}
+
+/* ========== entregas (RF11) e painel (RF12) ========== */
+var ME='Carla Nogueira';
+var EST={pendente:{nome:'Pendente',tone:'warn',icon:'clock'},entregue:{nome:'Entregue',tone:'ok',icon:'check'},atrasada:{nome:'Atrasada',tone:'danger',icon:'alert'}};
+function diasEntre(a,b){var A=Date.UTC(+a.slice(0,4),+a.slice(5,7)-1,+a.slice(8,10)),B=Date.UTC(+b.slice(0,4),+b.slice(5,7)-1,+b.slice(8,10));return Math.round((B-A)/86400000);}
+function ent(id){return state.entregas.filter(function(e){return e.id===id;})[0];}
+function entsDe(oid){return state.entregas.filter(function(e){return e.orcId===oid;}).sort(function(a,b){return a.prevista<b.prevista?-1:1;});}
+function entStatus(e){return e.real?'entregue':(e.prevista<hojeISO()?'atrasada':'pendente');}
+function entPill(st){var x=EST[st];return '<span class="pill t-'+x.tone+'">'+ico(x.icon,14)+x.nome+'</span>';}
+function plural(n,s,p){return n+' '+(n===1?s:p);}
+function cmpEnt(e){var d=diasEntre(e.prevista,e.real);return d===0?'Entregue no prazo':(d>0?'Entregue com '+plural(d,'dia','dias')+' de atraso':'Entregue '+plural(-d,'dia','dias')+' antes do previsto');}
+function semEntrega(){return state.orcs.filter(function(o){return o.status==='aprovado'&&!entsDe(o.id).length;});}
+
+/* ----- card de entregas no detalhe do orçamento aprovado (Representante) ----- */
+function entCard(o){
+  if(o.status!=='aprovado')return '';
+  var es=entsDe(o.id);
+  var corpo=es.length?'<ul class="minilist">'+es.map(function(e){var st=entStatus(e);
+    var linha=e.real?'Realizada em '+dt(e.real)+' · '+cmpEnt(e):(st==='atrasada'?'Atrasada há '+plural(diasEntre(e.prevista,hojeISO()),'dia','dias'):'Aguardando a chegada dos materiais');
+    return '<li><div class="grow"><b>Prevista para '+dt(e.prevista)+'</b><span class="sub">'+esc(linha)+'</span></div>'+entPill(st)+(e.real?'':'<a class="btn btn-secondary" href="#entrega-'+e.id+'-concluir">Registrar entrega realizada</a>')+'</li>';}).join('')+'</ul>'
+    :'<div class="empty">'+ico('truck',28)+'<b>Nenhuma entrega registrada</b><span>Informe a data prevista para o Painel passar a acompanhar este orçamento.</span></div>';
+  return '<section class="card"><div class="card-h"><h2>Entregas</h2><a class="btn btn-primary" href="#orcamento-'+o.id+'-entrega">'+ico('plus')+'Registrar entrega</a></div>'+corpo+'</section>';
+}
+
+/* ----- lista de entregas ----- */
+function entsFiltradas(){
+  var f=state.fe,q=norm(f.q),ord={atrasada:0,pendente:1,entregue:2};
+  return state.entregas.filter(function(e){var o=orc(e.orcId),ob=obra(o.obraId);
+    if(f.status!=='todos'&&entStatus(e)!==f.status)return false;
+    if(q&&norm(o.numero+' '+ob.nome+' '+nomeCli(ob.clienteId)).indexOf(q)<0)return false;return true;})
+   .sort(function(a,b){var sa=ord[entStatus(a)],sb=ord[entStatus(b)];return sa!==sb?sa-sb:(a.prevista<b.prevista?-1:1);});
+}
+function listaEnt(){
+  var l=entsFiltradas();
+  var n='<p class="count" aria-live="polite">'+plural(l.length,'entrega','entregas')+'</p>';
+  if(!l.length)return n+'<div class="empty">'+ico('truck',28)+'<b>Nenhuma entrega encontrada</b><span>Ajuste a busca ou o filtro de situação.</span><button type="button" class="btn btn-secondary" data-action="limpar-ent">Limpar filtros</button></div>';
+  return n+'<table class="tbl"><thead><tr><th scope="col">Orçamento</th><th scope="col">Representada</th><th scope="col">Prevista</th><th scope="col">Realizada</th><th scope="col">Situação</th><th scope="col" class="n">Ação</th></tr></thead><tbody>'+
+   l.map(function(e){var o=orc(e.orcId),ob=obra(o.obraId),st=entStatus(e);
+    var acao=e.real?'':'<a class="btn btn-secondary" href="#entrega-'+e.id+'-concluir">Registrar entrega</a>';
+    return '<tr><td class="c-main"><a class="lnk" href="#orcamento-'+o.id+'">Nº '+o.numero+'</a><span class="sub">'+esc(ob.nome)+'</span></td>'+
+     '<td class="hide-sm">'+esc(repr(o.repId).nome)+'</td><td class="hide-sm num">'+dt(e.prevista)+'</td>'+
+     '<td class="hide-sm num">'+(e.real?dt(e.real)+'<span class="sub">'+esc(cmpEnt(e))+'</span>':'—')+'</td>'+
+     '<td class="c-status">'+entPill(st)+'</td><td class="hide-sm n">'+acao+'</td>'+
+     '<td class="only-sm">Prevista '+dt(e.prevista)+(e.real?' · Realizada '+dt(e.real)+' ('+esc(cmpEnt(e).toLowerCase())+')':'')+'</td>'+
+     (e.real?'':'<td class="only-sm">'+acao.replace('btn btn-secondary','btn btn-secondary btn-block')+'</td>')+'</tr>';}).join('')+'</tbody></table>';
+}
+function viewEntregas(){
+  var f=state.fe,sem=semEntrega();
+  var inner=head({title:'Entregas',sub:'Entregas dos orçamentos aprovados, com data prevista e data real.'})+
+  '<section class="card" aria-label="Lista de entregas"><div class="toolbar">'+
+   '<div class="search">'+ico('search',18)+'<label class="sr" for="q-ent">Buscar entrega por orçamento, obra ou cliente</label><input class="input" id="q-ent" type="search" autocomplete="off" placeholder="Buscar entrega" value="'+esc(f.q)+'"></div>'+
+   '<div class="seg seg-4" role="group" aria-label="Situação">'+[['todos','Todas'],['pendente','Pendentes'],['atrasada','Atrasadas'],['entregue','Entregues']].map(function(x){return '<button type="button" data-action="seg-ent" data-v="'+x[0]+'" aria-pressed="'+(f.status===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+  '</div><div id="list-ent">'+listaEnt()+'</div></section>'+
+  (sem.length?'<section class="card"><div class="card-h"><h2>Aprovados sem entrega registrada</h2></div><ul class="minilist">'+sem.map(function(o){var ob=obra(o.obraId);
+    return '<li><div class="grow"><b>Orçamento nº '+o.numero+'</b><span class="sub">'+esc(ob.nome)+' · aprovado em '+dt(o.decisao)+'</span></div><a class="btn btn-secondary" href="#orcamento-'+o.id+'-entrega">Registrar entrega</a></li>';}).join('')+'</ul></section>':'');
+  return shell(inner,'entregas');
+}
+function refreshEnt(){var el=$('#list-ent');if(!el)return;el.innerHTML=listaEnt();document.querySelectorAll('[data-action="seg-ent"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-v')===state.fe.status));});}
+
+/* ----- formulários: previsão e entrega realizada ----- */
+function viewEntForm(kind,id){
+  var prev=kind==='prev',e=prev?null:ent(id),o=prev?orc(id):(e&&orc(e.orcId));
+  if(!o||(!prev&&!e))return shell(head({title:'Não encontrado',crumbs:[['Entregas','entregas'],['Não encontrado']]}),'entregas');
+  var ob=obra(o.obraId),E=state.entErr||{};
+  var crumbs=[['Orçamentos','orcamentos'],['Nº '+o.numero,'orcamento-'+o.id],[prev?'Registrar entrega':'Entrega realizada']];
+  if(o.status!=='aprovado')return shell(head({crumbs:crumbs,title:'Registrar entrega'})+'<div class="banner">'+ico('lock',20)+'<div>Só é possível registrar entregas de orçamentos aprovados.</div></div><div><a class="btn btn-secondary" href="#orcamento-'+o.id+'">'+ico('left')+'Voltar ao orçamento</a></div>','orcamentos');
+  if(!prev&&e.real)return shell(head({crumbs:crumbs,title:'Entrega realizada'})+'<div class="banner">'+ico('info',20)+'<div>Esta entrega já foi registrada em '+dt(e.real)+'. '+esc(cmpEnt(e))+'.</div></div><div><a class="btn btn-secondary" href="#orcamento-'+o.id+'">'+ico('left')+'Voltar ao orçamento</a></div>','orcamentos');
+  var val=state.entVal||'';
+  var campo='<div class="field"><label for="e-data">'+(prev?'Data prevista de entrega':'Data real de entrega')+' <span class="req" aria-hidden="true">*</span></label><input class="input" id="e-data" type="date" value="'+esc(val)+'"'+(E.data?' aria-invalid="true" aria-describedby="e-err"':'')+'><span class="hint">'+(prev?'Dia em que os materiais devem chegar à obra.':'Dia em que os materiais chegaram à obra.')+'</span>'+err(E.data,'e-err')+'</div>';
+  var inner=head({crumbs:crumbs,title:prev?'Registrar previsão de entrega':'Registrar entrega realizada',sub:prev?'Informe a data prevista. O Painel passa a acompanhar a entrega e destaca se ela atrasar.':'Informe a data em que os materiais chegaram. O sistema compara com a data prevista.'})+
+  '<form class="orc-form" id="f-ent" data-kind="'+kind+'" data-id="'+id+'" novalidate><section class="card"><div class="card-h"><h2>Orçamento nº '+o.numero+'</h2></div><dl class="kv">'+
+    '<div><dt>Obra</dt><dd>'+esc(ob.nome)+'</dd></div><div><dt>Representada</dt><dd>'+esc(repr(o.repId).nome)+'</dd></div>'+
+    (prev?'':'<div><dt>Data prevista</dt><dd class="num">'+dt(e.prevista)+'</dd></div>')+'</dl></section>'+
+   '<section class="card"><div class="card-b">'+campo+'</div></section>'+
+   '<div class="form-a"><button type="submit" class="btn btn-primary">'+(prev?'Salvar previsão':'Confirmar entrega')+'</button><a class="btn btn-secondary" href="#orcamento-'+o.id+'">Cancelar</a></div></form>';
+  return shell(inner,'orcamentos');
+}
+function submitEnt(form){
+  var kind=form.getAttribute('data-kind'),id=+form.getAttribute('data-id'),prev=kind==='prev';
+  var e=prev?null:ent(id),o=prev?orc(id):orc(e.orcId),d=$('#e-data').value,hj=hojeISO(),E={};
+  if(o.status!=='aprovado'||(!prev&&e.real))return;
+  if(!d)E.data=prev?'Informe a data prevista de entrega.':'Informe a data real de entrega.';
+  else if(prev&&d<hj)E.data='A data prevista não pode ser anterior a hoje.';
+  else if(!prev&&d>hj)E.data='A data real não pode ser futura.';
+  else if(!prev&&d<o.decisao)E.data='A data real não pode ser anterior à aprovação do orçamento ('+dt(o.decisao)+').';
+  if(E.data){state.entErr=E;state.entVal=d;mount(viewEntForm(kind,id));var f=$('[aria-invalid="true"]');if(f)f.focus();return;}
+  state.entErr=null;state.entVal='';
+  if(prev){state.entregas.push({id:state.nextEnt++,orcId:o.id,prevista:d,real:null});toast('Previsão de entrega registrada com sucesso');}
+  else{e.real=d;toast('Entrega registrada. '+cmpEnt(e)+'.');}
+  go('orcamento-'+o.id);
+}
+
+/* ----- painel de acompanhamento (RF12) ----- */
+function itensPainel(){
+  var N=state.fp.dias,hj=hojeISO(),out=[],adm=isAdmin();
+  state.orcs.forEach(function(o){
+    var ob=obra(o.obraId);
+    if(!adm&&ob.rep!==ME)return;
+    if(adm&&state.fp.rep!=='todos'&&ob.rep!==state.fp.rep)return;
+    if(o.status==='pendente'){var v=vig(o),d=diasEntre(v.data,hj);out.push({tipo:'pendente',orc:o,dias:d,parado:d>=N,nivel:d>=2*N?'alta':'media'});}
+    entsDe(o.id).forEach(function(e){if(entStatus(e)==='atrasada'){var d=diasEntre(e.prevista,hj);out.push({tipo:'entrega',orc:o,ent:e,dias:d,nivel:d>=3?'alta':'media'});}});
+  });
+  return out;
+}
+function painelDados(){
+  var todos=itensPainel();
+  var kp={atras:todos.filter(function(i){return i.tipo==='entrega';}).length,parados:todos.filter(function(i){return i.tipo==='pendente'&&i.parado;}).length,pend:todos.filter(function(i){return i.tipo==='pendente';}).length};
+  var lista=todos.filter(function(i){
+    var t=state.fp.tipo;
+    if(t==='entregas')return i.tipo==='entrega';
+    if(t==='parados')return i.tipo==='pendente'&&i.parado;
+    return i.tipo==='entrega'||i.parado;
+  }).sort(function(a,b){if(a.nivel!==b.nivel)return a.nivel==='alta'?-1:1;return b.dias-a.dias;});
+  return {kp:kp,lista:lista};
+}
+function nivelPill(n){return n==='alta'?'<span class="pill t-danger">'+ico('alert',14)+'Alta</span>':'<span class="pill t-warn">'+ico('clock',14)+'Média</span>';}
+function motivoTxt(i){
+  if(i.tipo==='entrega')return 'Entrega atrasada há '+plural(i.dias,'dia','dias')+' (prevista para '+dt(i.ent.prevista)+')';
+  return 'Orçamento pendente sem movimentação há '+plural(i.dias,'dia','dias')+' (última versão em '+dt(vig(i.orc).data)+')';
+}
+function painelCorpo(){
+  var d=painelDados(),adm=isAdmin(),l=d.lista;
+  var tiles='<div class="tiles">'+
+   '<div class="tile'+(d.kp.atras?' t-alert':'')+'"><b>'+d.kp.atras+'</b><span>Entregas atrasadas</span></div>'+
+   '<div class="tile'+(d.kp.parados?' t-warnc':'')+'"><b>'+d.kp.parados+'</b><span>Orçamentos parados</span></div>'+
+   '<div class="tile"><b>'+d.kp.pend+'</b><span>Orçamentos pendentes</span></div></div>';
+  var tab=l.length?'<table class="tbl"><thead><tr><th scope="col">Urgência</th><th scope="col">Orçamento</th><th scope="col">Motivo</th>'+(adm?'<th scope="col">Representante</th>':'')+'</tr></thead><tbody>'+
+   l.map(function(i){var o=i.orc,ob=obra(o.obraId);
+    return '<tr><td class="c-status">'+nivelPill(i.nivel)+'</td><td class="c-main"><a class="rowlink" href="#orcamento-'+o.id+'">Nº '+o.numero+'</a><span class="sub">'+esc(ob.nome)+' · '+esc(nomeCli(ob.clienteId))+'</span></td>'+
+     '<td class="hide-sm">'+esc(motivoTxt(i))+'</td>'+(adm?'<td class="hide-sm">'+esc(ob.rep)+'</td>':'')+
+     '<td class="only-sm">'+esc(motivoTxt(i))+(adm?' · '+esc(ob.rep):'')+'</td></tr>';}).join('')+'</tbody></table>'
+   :'<div class="empty">'+ico('check',28)+'<b>Nada precisa de atenção agora</b><span>Nenhuma entrega atrasada e nenhum orçamento parado com os filtros atuais.</span></div>';
+  return tiles+'<section class="card" aria-label="Itens que precisam de atenção"><div class="card-h"><h2>Precisam de atenção</h2><span class="hint" aria-live="polite">'+plural(l.length,'item','itens')+', do mais urgente ao menos urgente</span></div>'+tab+'</section>';
+}
+function viewPainel(){
+  var f=state.fp,adm=isAdmin();
+  var inner=head({title:'Painel de acompanhamento',sub:adm?'Visão consolidada de todos os representantes: entregas atrasadas e orçamentos pendentes sem movimentação.':'Entregas atrasadas e orçamentos pendentes sem movimentação das suas obras, do mais urgente ao menos urgente.'})+
+  '<div class="toolbar pnl-bar card">'+
+   '<div class="seg" role="group" aria-label="Tipo de alerta">'+[['todos','Todos'],['entregas','Entregas atrasadas'],['parados','Orçamentos parados']].map(function(x){return '<button type="button" data-action="seg-pnl" data-v="'+x[0]+'" aria-pressed="'+(f.tipo===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+   '<div class="tool-sel"><label class="sr" for="dias-pnl">Considerar parado após</label><select class="select" id="dias-pnl">'+[5,7,10,15,30].map(function(n){return '<option value="'+n+'"'+(f.dias===n?' selected':'')+'>Parado há '+n+' dias ou mais</option>';}).join('')+'</select></div>'+
+   (adm?'<div class="tool-sel"><label class="sr" for="rep-pnl">Representante</label><select class="select" id="rep-pnl"><option value="todos">Todos os representantes</option>'+repsPainel().map(function(r){return '<option'+(f.rep===r?' selected':'')+'>'+esc(r)+'</option>';}).join('')+'</select></div>':'')+
+  '</div><div id="pnl-body" class="stack">'+painelCorpo()+'</div>';
+  return shell(inner,'painel');
+}
+function refreshPainel(){var el=$('#pnl-body');if(!el)return;el.innerHTML=painelCorpo();document.querySelectorAll('[data-action="seg-pnl"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-v')===state.fp.tipo));});}
+
+/* ========== usuários (RF01) ========== */
+var PERFIS={administrador:{nome:'Administrador',tone:'teal',icon:'shield',desc:'Gerencia usuários e cadastros'},representante:{nome:'Representante',tone:'info',icon:'user',desc:'Atende clientes, obras, orçamentos e entregas'},cliente:{nome:'Cliente',tone:'muted',icon:'users',desc:'Consulta e decide sobre os próprios orçamentos'}};
+function usr(id){return state.usuarios.filter(function(u){return u.id===id;})[0];}
+function usuarioPorEmail(em){em=String(em||'').trim().toLowerCase();return state.usuarios.filter(function(u){return u.email.toLowerCase()===em;})[0];}
+function perfilPill(p){var x=PERFIS[p];return '<span class="pill t-'+x.tone+'">'+ico(x.icon,14)+x.nome+'</span>';}
+function ultimoAdmin(u){return u.perfil==='administrador'&&u.ativo&&state.usuarios.filter(function(x){return x.perfil==='administrador'&&x.ativo;}).length===1;}
+function repsAtivos(){return state.usuarios.filter(function(u){return u.perfil==='representante'&&u.ativo;}).map(function(u){return u.nome;}).sort();}
+function repOpts(atual){var l=repsAtivos();if(atual&&l.indexOf(atual)<0)l.push(atual);return l.map(function(r){return [r,r];});}
+function vinculoNome(u){return u.clienteId?nomeCli(u.clienteId):'—';}
+function obrasDoRep(nome){return state.obras.filter(function(o){return o.rep===nome&&o.ativo;});}
+function repsPainel(){var l=repsAtivos();state.obras.forEach(function(o){if(l.indexOf(o.rep)<0)l.push(o.rep);});return l.sort();}
+function viewRestritoUsr(){return viewRestrito('Usuários são gerenciados pelo Administrador (RF01).','Somente o Administrador acessa esta tela.');}
+
+/* ----- lista (Consultar) ----- */
+function usrFiltrados(){
+  var f=state.fu,q=norm(f.q);
+  return state.usuarios.filter(function(u){
+    if(f.status==='ativos'&&!u.ativo)return false;
+    if(f.status==='inativos'&&u.ativo)return false;
+    if(f.perfil!=='todos'&&u.perfil!==f.perfil)return false;
+    if(q&&norm(u.nome+' '+u.email).indexOf(q)<0)return false;
+    return true;
+  }).sort(function(a,b){return norm(a.nome)<norm(b.nome)?-1:1;});
+}
+function listaUsr(){
+  var l=usrFiltrados();
+  var n='<p class="count" aria-live="polite">'+plural(l.length,'usuário','usuários')+'</p>';
+  if(!l.length)return n+'<div class="empty">'+ico('search',28)+'<b>Nenhum usuário encontrado</b><span>Ajuste a busca ou os filtros.</span><button type="button" class="btn btn-secondary" data-action="limpar-usr">Limpar filtros</button></div>';
+  return n+'<table class="tbl"><thead><tr><th scope="col">Usuário</th><th scope="col">Perfil</th><th scope="col">Cliente vinculado</th><th scope="col">Situação</th></tr></thead><tbody>'+
+   l.map(function(u){
+    return '<tr><td class="c-main"><a class="rowlink" href="#usuario-'+u.id+'">'+esc(u.nome)+'</a><span class="sub">'+esc(u.email)+'</span></td>'+
+     '<td class="hide-sm">'+perfilPill(u.perfil)+'</td><td class="hide-sm">'+esc(vinculoNome(u))+'</td>'+
+     '<td class="c-status">'+statusPill(u.ativo)+'</td>'+
+     '<td class="only-sm">'+perfilPill(u.perfil)+(u.clienteId?' · '+esc(vinculoNome(u)):'')+'</td></tr>';}).join('')+'</tbody></table>';
+}
+function viewUsuarios(){
+  var f=state.fu;
+  var inner=head({title:'Usuários',sub:'Quem acessa o sistema e com qual perfil.',actions:'<a class="btn btn-primary" href="#usuario-novo">'+ico('plus')+'Novo usuário</a>'})+
+  '<section class="card" aria-label="Lista de usuários"><div class="toolbar">'+
+   '<div class="search">'+ico('search',18)+'<label class="sr" for="q-usr">Buscar usuário por nome ou e-mail</label><input class="input" id="q-usr" type="search" autocomplete="off" placeholder="Buscar usuário" value="'+esc(f.q)+'"></div>'+
+   '<div class="tool-sel"><label class="sr" for="perfil-usr">Perfil</label><select class="select" id="perfil-usr"><option value="todos">Todos os perfis</option>'+Object.keys(PERFIS).map(function(k){return '<option value="'+k+'"'+(f.perfil===k?' selected':'')+'>'+PERFIS[k].nome+'</option>';}).join('')+'</select></div>'+
+   '<div class="seg" role="group" aria-label="Situação">'+[['ativos','Ativos'],['inativos','Inativos'],['todos','Todos']].map(function(x){return '<button type="button" data-action="seg-usr" data-v="'+x[0]+'" aria-pressed="'+(f.status===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+  '</div><div id="list-usr">'+listaUsr()+'</div></section>';
+  return shell(inner,'usuarios');
+}
+function refreshUsr(){var el=$('#list-usr');if(!el)return;el.innerHTML=listaUsr();document.querySelectorAll('[data-action="seg-usr"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-v')===state.fu.status));});}
+
+/* ----- detalhe ----- */
+function viewUsuario(id){
+  var u=usr(id);
+  if(!u)return shell(head({title:'Usuário não encontrado',crumbs:[['Usuários','usuarios'],['Não encontrado']]}),'usuarios');
+  var unico=ultimoAdmin(u);
+  var acts='<a class="btn btn-secondary" href="#usuario-'+id+'-editar">'+ico('pencil')+'Alterar</a>'+
+    (u.ativo?'<button type="button" class="btn btn-warn" data-action="inativar-usr" data-id="'+id+'"'+(unico?' disabled aria-describedby="un-adm"':'')+'>'+ico('archive')+'Inativar</button>':'<button type="button" class="btn btn-secondary" data-action="reativar-usr" data-id="'+id+'">'+ico('restore')+'Reativar</button>');
+  var obras=u.perfil==='representante'?obrasDoRep(u.nome):[];
+  var lateral=u.perfil==='representante'?'<section class="card"><div class="card-h"><h2>Obras sob responsabilidade</h2></div>'+(obras.length?'<ul class="minilist">'+obras.map(function(o){return '<li><div class="grow"><a class="rowlink" href="#obra-'+o.id+'">'+esc(o.nome)+'</a><span class="sub">'+esc(nomeCli(o.clienteId))+' · '+esc(o.cidade)+'</span></div></li>';}).join('')+'</ul>':'<div class="empty">'+ico('obra',28)+'<b>Nenhuma obra ativa</b><span>Este representante não é responsável por obras ativas.</span></div>')+'</section>':'';
+  var inner=head({crumbs:[['Usuários','usuarios'],[u.nome]],title:u.nome,badges:perfilPill(u.perfil)+statusPill(u.ativo),sub:esc(u.email),actions:acts})+
+   (unico?'<div class="banner" id="un-adm">'+ico('shield',20)+'<div>Este é o único administrador ativo. Ele não pode ser inativado nem ter o perfil alterado.</div></div>':'')+
+   (u.ativo?'':'<div class="banner t-danger">'+ico('lock',20)+'<div>Acesso bloqueado. Este usuário não consegue entrar no sistema enquanto estiver inativo.</div></div>')+
+   '<div class="grid-2"><div class="stack"><section class="card"><div class="card-h"><h2>Dados do usuário</h2></div><dl class="kv">'+
+     '<div class="wide"><dt>Nome</dt><dd>'+esc(u.nome)+'</dd></div><div><dt>E-mail</dt><dd>'+esc(u.email)+'</dd></div><div><dt>Perfil</dt><dd>'+PERFIS[u.perfil].nome+'</dd></div>'+
+     (u.clienteId?'<div class="wide"><dt>Cliente vinculado</dt><dd><a href="#cliente-'+u.clienteId+'">'+esc(nomeCli(u.clienteId))+'</a></dd></div>':'')+
+     '<div class="wide"><dt>Credenciais de acesso</dt><dd>Enviadas para '+esc(u.email)+' em '+dt(u.cred)+'</dd></div></dl></section></div>'+
+   '<div class="stack">'+lateral+'</div></div>';
+  return shell(inner,'usuarios');
+}
+
+/* ----- formulário (Cadastrar e Alterar) ----- */
+function viewUsuarioForm(id,v,e){
+  var edit=!!id,u=edit?usr(id):null;
+  if(edit&&!u)return shell(head({title:'Usuário não encontrado',crumbs:[['Usuários','usuarios'],['Não encontrado']]}),'usuarios');
+  if(!v)v=edit?{nome:u.nome,email:u.email,perfil:u.perfil,clienteId:u.clienteId?String(u.clienteId):''}:{nome:'',email:'',perfil:'',clienteId:''};
+  e=e||{};
+  var trav=edit&&ultimoAdmin(u);
+  function inv(k){return e[k]?' aria-invalid="true" aria-describedby="e-'+k+'"':'';}
+  var cliOpts=state.clientes.filter(function(c){return (c.ativo&&!c.eliminado)||(edit&&u.clienteId===c.id);}).sort(function(a,b){return norm(a.nome)<norm(b.nome)?-1:1;});
+  var perfis='<fieldset class="fs"><legend>Perfil <span class="req" aria-hidden="true">*</span></legend><div class="choice choice-1">'+Object.keys(PERFIS).map(function(k){
+    return '<label class="opt"><input type="radio" name="perfil" value="'+k+'"'+(v.perfil===k?' checked':'')+(trav?' disabled':'')+'><span class="opt-box"><span>'+PERFIS[k].nome+'<small>'+PERFIS[k].desc+'</small></span></span></label>';}).join('')+'</div>'+
+    (trav?'<p class="hint" style="margin-top:8px">Único administrador ativo: o perfil não pode ser alterado.</p>':'')+err(e.perfil,'e-perfil')+'</fieldset>';
+  var inner=head({crumbs:[['Usuários','usuarios'],edit?[u.nome,'usuario-'+id]:null,[edit?'Alterar':'Novo usuário']].filter(Boolean),title:edit?'Alterar usuário':'Novo usuário',sub:edit?'Campos com * são obrigatórios.':'Campos com * são obrigatórios. As credenciais de acesso são enviadas para o e-mail informado.'})+
+  '<form class="card form" id="f-usuario" data-id="'+(id||'')+'" novalidate><div class="card-b" style="display:flex;flex-direction:column;gap:24px">'+
+   '<fieldset class="fs"><legend>Dados do usuário</legend><div class="fgrid">'+
+     '<div class="field wide"><label for="f-nome">Nome <span class="req" aria-hidden="true">*</span></label><input class="input" id="f-nome" name="nome" value="'+esc(v.nome)+'" autocomplete="off"'+inv('nome')+'>'+err(e.nome,'e-nome')+'</div>'+
+     '<div class="field wide"><label for="f-email">E-mail <span class="req" aria-hidden="true">*</span></label><input class="input" id="f-email" name="email" type="email" value="'+esc(v.email)+'" autocomplete="off"'+inv('email')+'><span class="hint">É o e-mail usado para entrar no sistema.</span>'+err(e.email,'e-email')+'</div>'+
+   '</div></fieldset>'+perfis+
+   '<div class="field" id="fld-cli"'+(v.perfil==='cliente'?'':' hidden')+'><label for="f-clienteId">Cliente vinculado <span class="req" aria-hidden="true">*</span></label><select class="select" id="f-clienteId" name="clienteId"'+inv('clienteId')+'><option value="">Selecione o cliente</option>'+cliOpts.map(function(c){return '<option value="'+c.id+'"'+(String(c.id)===String(v.clienteId)?' selected':'')+'>'+esc(c.nome)+'</option>';}).join('')+'</select><span class="hint">O usuário com perfil Cliente só enxerga os orçamentos das obras deste cliente.</span>'+err(e.clienteId,'e-clienteId')+'</div>'+
+   '<div class="form-a"><button type="submit" class="btn btn-primary">'+(edit?'Salvar alterações':'Cadastrar usuário')+'</button><a class="btn btn-secondary" href="#'+(edit?'usuario-'+id:'usuarios')+'">Cancelar</a></div>'+
+  '</div></form>';
+  return shell(inner,'usuarios');
+}
+function submitUsuario(form){
+  var id=form.getAttribute('data-id')?+form.getAttribute('data-id'):null,u=id?usr(id):null;
+  var fd=new FormData(form),g=function(k){return String(fd.get(k)||'').trim();};
+  var trav=u&&ultimoAdmin(u);
+  var v={nome:g('nome'),email:g('email'),perfil:trav?u.perfil:g('perfil'),clienteId:g('clienteId')},e={};
+  if(!v.nome)e.nome='Informe o nome do usuário.';
+  if(!v.email)e.email='Informe o e-mail.';
+  else if(!emailOk(v.email))e.email='Informe um e-mail válido, como nome@empresa.com.br.';
+  else{var ex=usuarioPorEmail(v.email);if(ex&&(!u||ex.id!==u.id))e.email='Este e-mail já está cadastrado para outro usuário.';}
+  if(!v.perfil)e.perfil='Selecione o perfil do usuário.';
+  if(v.perfil==='cliente'&&!v.clienteId)e.clienteId='Selecione o cliente ao qual este usuário pertence.';
+  if(Object.keys(e).length){mount(viewUsuarioForm(id,v,e));var f=$('[aria-invalid="true"]')||$('.err');if(f){if(f.id&&f.tagName==='DIV')f.setAttribute('tabindex','-1');f.focus();}return;}
+  var cid=v.perfil==='cliente'?+v.clienteId:null;
+  if(u){u.nome=v.nome;u.email=v.email;u.perfil=v.perfil;u.clienteId=cid;toast('Alteração efetuada com sucesso');go('usuario-'+id);}
+  else{var n={id:state.nextUsr++,nome:v.nome,email:v.email,perfil:v.perfil,clienteId:cid,ativo:true,cred:hojeISO()};state.usuarios.push(n);toast('Usuário cadastrado com sucesso');go('usuario-'+n.id);}
+}
+function confirmInativarUsr(id){
+  var u=usr(id),obras=u.perfil==='representante'?obrasDoRep(u.nome):[];
+  openModal({title:'Inativar usuário?',
+    body:'<p><b>'+esc(u.nome)+'</b> ('+PERFIS[u.perfil].nome+') perde o acesso ao sistema imediatamente. O cadastro e o histórico são mantidos e você pode reativar depois.</p>'+
+      (obras.length?'<p>Este representante é responsável por '+plural(obras.length,'obra ativa','obras ativas')+'. Elas continuam cadastradas; reatribua o responsável pela tela da obra.</p>':''),
+    ok:'Inativar',onOk:function(){u.ativo=false;toast('Usuário inativado com sucesso');render();}});
+}
+
+/* ========== materiais (RF08) ========== */
+var UNIDS=[['un','Unidade (un)'],['barra','Barra'],['m','Metro (m)'],['cx','Caixa (cx)'],['kg','Quilo (kg)'],['fr','Frasco (fr)']];
+function unidNome(u){var x=UNIDS.filter(function(k){return k[0]===u;})[0];return x?x[1]:u;}
+function matUsos(id){return state.orcs.filter(function(o){return o.versoes.some(function(v){return v.itens.some(function(i){return i.mid===id;});});}).length;}
+function repNomeM(id){var r=repr(id);return r?r.nome:'—';}
+function matCodigoExiste(repId,codigo,ignorar){var c=norm(codigo);return state.materiais.some(function(m){return m.repId===repId&&norm(m.codigo)===c&&(!ignorar||m.id!==ignorar);});}
+
+/* ----- lista (Consultar) ----- */
+function matFiltrados(){
+  var f=state.fm,q=norm(f.q);
+  return state.materiais.filter(function(m){
+    if(f.status==='ativos'&&!m.ativo)return false;
+    if(f.status==='inativos'&&m.ativo)return false;
+    if(f.rep!=='todas'&&String(m.repId)!==f.rep)return false;
+    if(q&&norm(m.codigo+' '+m.descricao).indexOf(q)<0)return false;
+    return true;
+  }).sort(function(a,b){var ra=norm(repNomeM(a.repId)),rb=norm(repNomeM(b.repId));if(ra!==rb)return ra<rb?-1:1;return norm(a.codigo)<norm(b.codigo)?-1:1;});
+}
+function listaMat(){
+  var l=matFiltrados();
+  var n='<p class="count" aria-live="polite">'+plural(l.length,'material','materiais')+'</p>';
+  if(!l.length)return n+'<div class="empty">'+ico('search',28)+'<b>Nenhum material encontrado</b><span>Ajuste a busca ou os filtros.</span><button type="button" class="btn btn-secondary" data-action="limpar-mat">Limpar filtros</button></div>';
+  return n+'<table class="tbl"><thead><tr><th scope="col">Material</th><th scope="col">Representada</th><th scope="col">Unidade</th><th scope="col" class="n">Preço</th><th scope="col">Situação</th></tr></thead><tbody>'+
+   l.map(function(m){
+    return '<tr><td class="c-main"><a class="rowlink" href="#material-'+m.id+'">'+esc(m.descricao)+'</a><span class="sub">'+esc(m.codigo)+'</span></td>'+
+     '<td class="hide-sm">'+esc(repNomeM(m.repId))+'</td><td class="hide-sm">'+esc(m.unid)+'</td><td class="hide-sm n num">'+brl(m.preco)+'</td>'+
+     '<td class="c-status">'+statusPill(m.ativo)+'</td>'+
+     '<td class="only-sm">'+esc(repNomeM(m.repId))+' · <b>'+brl(m.preco)+'</b> por '+esc(m.unid)+'</td></tr>';}).join('')+'</tbody></table>';
+}
+function viewMateriais(){
+  var f=state.fm;
+  var inner=head({title:'Materiais',sub:'Catálogo de materiais e preços de cada representada. É daqui que o orçamento busca os itens.',actions:'<a class="btn btn-primary" href="#material-novo">'+ico('plus')+'Novo material</a>'})+
+  '<section class="card" aria-label="Lista de materiais"><div class="toolbar">'+
+   '<div class="search">'+ico('search',18)+'<label class="sr" for="q-mat">Buscar material por código ou descrição</label><input class="input" id="q-mat" type="search" autocomplete="off" placeholder="Buscar material" value="'+esc(f.q)+'"></div>'+
+   '<div class="tool-sel"><label class="sr" for="rep-mat">Representada</label><select class="select" id="rep-mat"><option value="todas">Todas as representadas</option>'+state.representadas.map(function(r){return '<option value="'+r.id+'"'+(f.rep===String(r.id)?' selected':'')+'>'+esc(r.nome)+'</option>';}).join('')+'</select></div>'+
+   '<div class="seg" role="group" aria-label="Situação">'+[['ativos','Ativos'],['inativos','Inativos'],['todos','Todos']].map(function(x){return '<button type="button" data-action="seg-mat" data-v="'+x[0]+'" aria-pressed="'+(f.status===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+  '</div><div id="list-mat">'+listaMat()+'</div></section>';
+  return shell(inner,'materiais');
+}
+function refreshMat(){var el=$('#list-mat');if(!el)return;el.innerHTML=listaMat();document.querySelectorAll('[data-action="seg-mat"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-v')===state.fm.status));});}
+
+/* ----- detalhe ----- */
+function viewMaterial(id){
+  var m=mat(id);
+  if(!m)return shell(head({title:'Material não encontrado',crumbs:[['Materiais','materiais'],['Não encontrado']]}),'materiais');
+  var usos=matUsos(id),r=repr(m.repId);
+  var acts='<a class="btn btn-secondary" href="#material-'+id+'-editar">'+ico('pencil')+'Alterar</a>'+
+    (m.ativo?'<button type="button" class="btn btn-warn" data-action="inativar-mat" data-id="'+id+'">'+ico('archive')+'Inativar</button>':'<button type="button" class="btn btn-secondary" data-action="reativar-mat" data-id="'+id+'">'+ico('restore')+'Reativar</button>');
+  var inner=head({crumbs:[['Materiais','materiais'],[m.descricao]],title:m.descricao,badges:statusPill(m.ativo),sub:esc(m.codigo)+' · '+esc(r?r.nome:'—'),actions:acts})+
+   (m.ativo?'':'<div class="banner">'+ico('info',20)+'<div>Material inativo: não aparece na escolha de itens de novos orçamentos. Orçamentos já emitidos continuam exibindo este material e o preço da época.</div></div>')+
+   '<div class="grid-2"><div class="stack"><section class="card"><div class="card-h"><h2>Dados do material</h2></div><dl class="kv">'+
+     '<div class="wide"><dt>Descrição</dt><dd>'+esc(m.descricao)+'</dd></div>'+
+     '<div><dt>Código</dt><dd>'+esc(m.codigo)+'</dd></div><div><dt>Representada</dt><dd>'+(r?'<a href="#representada-'+r.id+'">'+esc(r.nome)+'</a>':'—')+'</dd></div>'+
+     '<div><dt>Unidade</dt><dd>'+esc(unidNome(m.unid))+'</dd></div><div><dt>Preço atual</dt><dd class="num">'+brl(m.preco)+' por '+esc(m.unid)+'</dd></div></dl></section></div>'+
+   '<div class="stack"><section class="card"><div class="card-h"><h2>Uso em orçamentos</h2></div><div class="card-b"><p>'+(usos?'Este material aparece em <b>'+plural(usos,'orçamento','orçamentos')+'</b>.':'Este material ainda não foi usado em nenhum orçamento.')+'</p>'+
+     '<p class="hint" style="margin-top:8px">Alterar o preço vale só para novos orçamentos. As versões já emitidas mantêm o valor da época.</p></div></section></div></div>';
+  return shell(inner,'materiais');
+}
+
+/* ----- formulário (Cadastrar e Alterar) ----- */
+function viewMaterialForm(id,v,e){
+  var edit=!!id,m=edit?mat(id):null;
+  if(edit&&!m)return shell(head({title:'Material não encontrado',crumbs:[['Materiais','materiais'],['Não encontrado']]}),'materiais');
+  if(!v){
+    if(edit)v={repId:String(m.repId),codigo:m.codigo,descricao:m.descricao,unid:m.unid,preco:Number(m.preco).toFixed(2)};
+    else{v={repId:state.prefillRep?String(state.prefillRep):(state.fm.rep!=='todas'?state.fm.rep:''),codigo:'',descricao:'',unid:'',preco:''};state.prefillRep=null;}
+  }
+  e=e||{};
+  var usos=edit?matUsos(id):0,trav=edit&&usos>0;
+  function inv(k){return e[k]?' aria-invalid="true" aria-describedby="e-'+k+'"':'';}
+  var reps=state.representadas.filter(function(r){return r.ativa||(edit&&r.id===m.repId);});
+  var campoRep=trav?
+    '<div class="field"><span class="lbl">Representada</span><div class="ro" style="text-align:left">'+esc(repNomeM(m.repId))+'</div><input type="hidden" name="repId" value="'+m.repId+'"><span class="hint">Não pode ser trocada: o material já foi usado em orçamentos.</span></div>':
+    '<div class="field"><label for="f-repId">Representada <span class="req" aria-hidden="true">*</span></label><select class="select" id="f-repId" name="repId"'+inv('repId')+'><option value="">Selecione a representada</option>'+reps.map(function(r){return '<option value="'+r.id+'"'+(String(r.id)===String(v.repId)?' selected':'')+'>'+esc(r.nome)+'</option>';}).join('')+'</select>'+err(e.repId,'e-repId')+'</div>';
+  var inner=head({crumbs:[['Materiais','materiais'],edit?[m.descricao,'material-'+id]:null,[edit?'Alterar':'Novo material']].filter(Boolean),title:edit?'Alterar material':'Novo material',sub:'Campos com * são obrigatórios.'})+
+  '<form class="card form" id="f-material" data-id="'+(id||'')+'" novalidate><div class="card-b" style="display:flex;flex-direction:column;gap:24px">'+
+   '<fieldset class="fs"><legend>Dados do material</legend><div class="fgrid">'+campoRep+
+     '<div class="field"><label for="f-codigo">Código <span class="req" aria-hidden="true">*</span></label><input class="input" id="f-codigo" name="codigo" value="'+esc(v.codigo)+'" autocomplete="off"'+inv('codigo')+'><span class="hint">Código do catálogo da representada. Ex.: AST-005.</span>'+err(e.codigo,'e-codigo')+'</div>'+
+     '<div class="field wide"><label for="f-descricao">Descrição <span class="req" aria-hidden="true">*</span></label><input class="input" id="f-descricao" name="descricao" value="'+esc(v.descricao)+'" autocomplete="off" maxlength="120"'+inv('descricao')+'>'+err(e.descricao,'e-descricao')+'</div>'+
+     '<div class="field"><label for="f-unid">Unidade <span class="req" aria-hidden="true">*</span></label><select class="select" id="f-unid" name="unid"'+inv('unid')+'><option value="">Selecione a unidade</option>'+UNIDS.map(function(x){return '<option value="'+x[0]+'"'+(v.unid===x[0]?' selected':'')+'>'+esc(x[1])+'</option>';}).join('')+'</select>'+err(e.unid,'e-unid')+'</div>'+
+     '<div class="field"><label for="f-preco">Preço por unidade (R$) <span class="req" aria-hidden="true">*</span></label><input class="input num" id="f-preco" name="preco" type="number" min="0.01" step="0.01" inputmode="decimal" value="'+esc(v.preco)+'"'+inv('preco')+'>'+(edit?'<span class="hint">Orçamentos já emitidos mantêm o preço da época.</span>':'')+err(e.preco,'e-preco')+'</div>'+
+   '</div></fieldset>'+
+   '<div class="form-a"><button type="submit" class="btn btn-primary">'+(edit?'Salvar alterações':'Cadastrar material')+'</button><a class="btn btn-secondary" href="#'+(edit?'material-'+id:'materiais')+'">Cancelar</a></div>'+
+  '</div></form>';
+  return shell(inner,'materiais');
+}
+function submitMaterial(form){
+  var id=form.getAttribute('data-id')?+form.getAttribute('data-id'):null,m=id?mat(id):null;
+  var fd=new FormData(form),g=function(k){return String(fd.get(k)||'').trim();};
+  var v={repId:g('repId'),codigo:g('codigo'),descricao:g('descricao'),unid:g('unid'),preco:g('preco')},e={};
+  if(!v.repId)e.repId='Selecione a representada do material.';
+  if(!v.codigo)e.codigo='Informe o código do material.';
+  else if(v.repId&&matCodigoExiste(+v.repId,v.codigo,id))e.codigo='Já existe um material com este código nesta representada.';
+  if(!v.descricao)e.descricao='Informe a descrição do material.';
+  if(!v.unid)e.unid='Selecione a unidade de venda.';
+  var p=parseFloat(v.preco);
+  if(!v.preco)e.preco='Informe o preço do material.';
+  else if(!(p>0))e.preco='Informe um preço maior que zero.';
+  if(Object.keys(e).length){mount(viewMaterialForm(id,v,e));var f=$('[aria-invalid="true"]');if(f)f.focus();return;}
+  p=Math.round(p*100)/100;
+  if(m){m.repId=+v.repId;m.codigo=v.codigo;m.descricao=v.descricao;m.unid=v.unid;m.preco=p;toast('Alteração efetuada com sucesso');go('material-'+id);}
+  else{var n={id:state.nextMat++,repId:+v.repId,codigo:v.codigo,descricao:v.descricao,unid:v.unid,preco:p,ativo:true};state.materiais.push(n);toast('Material cadastrado com sucesso');go('material-'+n.id);}
+}
+function confirmInativarMat(id){
+  var m=mat(id),usos=matUsos(id);
+  openModal({title:'Inativar material?',
+    body:'<p><b>'+esc(m.descricao)+'</b> ('+esc(m.codigo)+') deixa de aparecer na escolha de itens de novos orçamentos.</p>'+
+      '<p>'+(usos?'Ele aparece em '+plural(usos,'orçamento','orçamentos')+', que continuam como estão. ':'')+'Você pode reativar depois.</p>',
+    ok:'Inativar',onOk:function(){m.ativo=false;toast('Material inativado com sucesso');render();}});
+}
+
+/* ========== representadas (RF13) ========== */
+function repdMats(id){return state.materiais.filter(function(m){return m.repId===id;});}
+function repdOrcs(id){return state.orcs.filter(function(o){return o.repId===id;});}
+function repdNomeExiste(nome,ignorar){var n=norm(nome);return state.representadas.some(function(r){return norm(r.nome)===n&&(!ignorar||r.id!==ignorar);});}
+
+/* ----- lista (Consultar) ----- */
+function repdFiltradas(){
+  var f=state.frp,q=norm(f.q);
+  return state.representadas.filter(function(r){
+    if(f.status==='ativas'&&!r.ativa)return false;
+    if(f.status==='inativas'&&r.ativa)return false;
+    if(q&&norm(r.nome).indexOf(q)<0)return false;
+    return true;
+  }).sort(function(a,b){return norm(a.nome)<norm(b.nome)?-1:1;});
+}
+function listaRepd(){
+  var l=repdFiltradas();
+  var n='<p class="count" aria-live="polite">'+plural(l.length,'representada','representadas')+'</p>';
+  if(!l.length)return n+'<div class="empty">'+ico('search',28)+'<b>Nenhuma representada encontrada</b><span>Ajuste a busca ou os filtros.</span><button type="button" class="btn btn-secondary" data-action="limpar-repd">Limpar filtros</button></div>';
+  return n+'<table class="tbl"><thead><tr><th scope="col">Representada</th><th scope="col" class="n">Materiais ativos</th><th scope="col" class="n">Orçamentos</th><th scope="col">Situação</th></tr></thead><tbody>'+
+   l.map(function(r){
+    var ma=repdMats(r.id).filter(function(m){return m.ativo;}).length,no=repdOrcs(r.id).length;
+    return '<tr><td class="c-main"><a class="rowlink" href="#representada-'+r.id+'">'+esc(r.nome)+'</a></td>'+
+     '<td class="hide-sm n num">'+ma+'</td><td class="hide-sm n num">'+no+'</td>'+
+     '<td class="c-status">'+statusPill(r.ativa,true)+'</td>'+
+     '<td class="only-sm">'+plural(ma,'material ativo','materiais ativos')+' · '+plural(no,'orçamento','orçamentos')+'</td></tr>';}).join('')+'</tbody></table>';
+}
+function viewRepresentadas(){
+  var f=state.frp;
+  var inner=head({title:'Representadas',sub:'Fabricantes e marcas que a MLP representa. Cada representada tem os seus materiais e preços.',actions:'<a class="btn btn-primary" href="#representada-nova">'+ico('plus')+'Nova representada</a>'})+
+  '<section class="card" aria-label="Lista de representadas"><div class="toolbar">'+
+   '<div class="search">'+ico('search',18)+'<label class="sr" for="q-repd">Buscar representada por nome</label><input class="input" id="q-repd" type="search" autocomplete="off" placeholder="Buscar representada" value="'+esc(f.q)+'"></div>'+
+   '<div class="seg" role="group" aria-label="Situação">'+[['ativas','Ativas'],['inativas','Inativas'],['todas','Todas']].map(function(x){return '<button type="button" data-action="seg-repd" data-v="'+x[0]+'" aria-pressed="'+(f.status===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+  '</div><div id="list-repd">'+listaRepd()+'</div></section>';
+  return shell(inner,'representadas');
+}
+function refreshRepd(){var el=$('#list-repd');if(!el)return;el.innerHTML=listaRepd();document.querySelectorAll('[data-action="seg-repd"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-v')===state.frp.status));});}
+
+/* ----- detalhe ----- */
+function viewRepresentada(id){
+  var r=repr(id);
+  if(!r)return shell(head({title:'Representada não encontrada',crumbs:[['Representadas','representadas'],['Não encontrada']]}),'representadas');
+  var ms=repdMats(id).sort(function(a,b){return norm(a.codigo)<norm(b.codigo)?-1:1;}),no=repdOrcs(id).length,ma=ms.filter(function(m){return m.ativo;}).length;
+  var acts='<a class="btn btn-secondary" href="#representada-'+id+'-editar">'+ico('pencil')+'Alterar</a>'+
+    (r.ativa?'<button type="button" class="btn btn-warn" data-action="inativar-repd" data-id="'+id+'">'+ico('archive')+'Inativar</button>':'<button type="button" class="btn btn-secondary" data-action="reativar-repd" data-id="'+id+'">'+ico('restore')+'Reativar</button>');
+  var lista=ms.length?'<ul class="minilist">'+ms.slice(0,6).map(function(m){return '<li><div class="grow"><a class="rowlink" href="#material-'+m.id+'">'+esc(m.descricao)+'</a><span class="sub">'+esc(m.codigo)+' · '+brl(m.preco)+' por '+esc(m.unid)+'</span></div>'+statusPill(m.ativo)+'</li>';}).join('')+'</ul>'+
+      '<div class="card-b" style="padding-top:0"><button type="button" class="btn btn-secondary" data-action="ver-mats" data-id="'+id+'">Ver todos os materiais ('+ms.length+')</button></div>':
+    '<div class="empty">'+ico('box',28)+'<b>Nenhum material cadastrado</b><span>Cadastre os materiais desta representada para usá-los em orçamentos.</span><button type="button" class="btn btn-secondary" data-action="novo-mat-rep" data-id="'+id+'">'+ico('plus')+'Novo material</button></div>';
+  var inner=head({crumbs:[['Representadas','representadas'],[r.nome]],title:r.nome,badges:statusPill(r.ativa,true),sub:plural(ma,'material ativo','materiais ativos')+' · '+plural(no,'orçamento','orçamentos'),actions:acts})+
+   (r.ativa?'':'<div class="banner">'+ico('info',20)+'<div>Representada inativa: não aparece na escolha de novos orçamentos nem no cadastro de novos materiais. Materiais e orçamentos já existentes continuam registrados.</div></div>')+
+   '<div class="grid-2"><div class="stack"><section class="card"><div class="card-h"><h2>Dados da representada</h2></div><dl class="kv"><div class="wide"><dt>Nome</dt><dd>'+esc(r.nome)+'</dd></div></dl></section></div>'+
+   '<div class="stack"><section class="card"><div class="card-h"><h2>Materiais</h2></div>'+lista+'</section></div></div>';
+  return shell(inner,'representadas');
+}
+
+/* ----- formulário (Cadastrar e Alterar) ----- */
+function viewRepresentadaForm(id,v,e){
+  var edit=!!id,r=edit?repr(id):null;
+  if(edit&&!r)return shell(head({title:'Representada não encontrada',crumbs:[['Representadas','representadas'],['Não encontrada']]}),'representadas');
+  if(!v)v={nome:edit?r.nome:''};
+  e=e||{};
+  var inner=head({crumbs:[['Representadas','representadas'],edit?[r.nome,'representada-'+id]:null,[edit?'Alterar':'Nova representada']].filter(Boolean),title:edit?'Alterar representada':'Nova representada',sub:'Campos com * são obrigatórios.'})+
+  '<form class="card form" id="f-representada" data-id="'+(id||'')+'" novalidate><div class="card-b" style="display:flex;flex-direction:column;gap:24px">'+
+   '<fieldset class="fs"><legend>Dados da representada</legend><div class="fgrid"><div class="field wide"><label for="f-nome">Nome <span class="req" aria-hidden="true">*</span></label><input class="input" id="f-nome" name="nome" value="'+esc(v.nome)+'" autocomplete="off" maxlength="60"'+(e.nome?' aria-invalid="true" aria-describedby="e-nome"':'')+'><span class="hint">Nome da marca ou do fabricante. Ex.: Astra, Japi, Nambei, Termomecânica.</span>'+err(e.nome,'e-nome')+'</div></div></fieldset>'+
+   '<div class="form-a"><button type="submit" class="btn btn-primary">'+(edit?'Salvar alterações':'Cadastrar representada')+'</button><a class="btn btn-secondary" href="#'+(edit?'representada-'+id:'representadas')+'">Cancelar</a></div>'+
+  '</div></form>';
+  return shell(inner,'representadas');
+}
+function submitRepresentada(form){
+  var id=form.getAttribute('data-id')?+form.getAttribute('data-id'):null,r=id?repr(id):null;
+  var nome=String(new FormData(form).get('nome')||'').trim().replace(/\s+/g,' '),e={};
+  if(!nome)e.nome='Informe o nome da representada.';
+  else if(repdNomeExiste(nome,id))e.nome='Já existe uma representada com este nome.';
+  if(Object.keys(e).length){mount(viewRepresentadaForm(id,{nome:nome},e));var f=$('[aria-invalid="true"]');if(f)f.focus();return;}
+  if(r){r.nome=nome;toast('Alteração efetuada com sucesso');go('representada-'+id);}
+  else{var n={id:state.nextRep++,nome:nome,ativa:true};state.representadas.push(n);toast('Representada cadastrada com sucesso');go('representada-'+n.id);}
+}
+function confirmInativarRepd(id){
+  var r=repr(id),ma=repdMats(id).filter(function(m){return m.ativo;}).length,pend=repdOrcs(id).filter(function(o){return o.status==='pendente';}).length;
+  openModal({title:'Inativar representada?',
+    body:'<p><b>'+esc(r.nome)+'</b> deixa de aparecer na escolha de novos orçamentos e no cadastro de novos materiais.</p>'+
+      '<p>Os materiais'+(ma?' ('+ma+' ativos)':'')+' e os orçamentos já existentes são mantidos'+(pend?'; '+(pend===1?'o orçamento pendente continua podendo ser reavaliado':pend+' orçamentos pendentes continuam podendo ser reavaliados'):'')+'. Você pode reativar depois.</p>',
+    ok:'Inativar',onOk:function(){r.ativa=false;toast('Representada inativada com sucesso');render();}});
+}
+
+/* ========== desenho da tela ========== */
+function mount(html){$('#app').innerHTML=html;}
+function render(){
+  var r=parse();
+  if(isCli()&&r.n!=='login'&&['orcs','orc','orc-versoes','orc-dec'].indexOf(r.n)<0){location.replace('#orcamentos');return;}
+  document.documentElement.style.setProperty('--band',r.n==='login'?'var(--brand)':'var(--surface)');
+  var h;
+  switch(r.n){
+    case 'login':h=viewLogin();break;
+    case 'clientes':h=viewClientes();break;
+    case 'cliente':h=viewCliente(r.id);break;
+    case 'cliente-form':h=viewClienteForm(r.id);break;
+    case 'obras':h=viewObras();break;
+    case 'obra':h=viewObra(r.id);break;
+    case 'obra-form':h=viewObraForm(r.id);break;
+    case 'orcs':h=isAdmin()?viewRestrito():viewOrcs();break;
+    case 'orc':h=isAdmin()?viewRestrito():viewOrc(r.id);break;
+    case 'orc-versoes':h=isAdmin()?viewRestrito():viewOrcVersoes(r.id);break;
+    case 'usuarios':h=isAdmin()?viewUsuarios():viewRestritoUsr();break;
+    case 'usuario':h=isAdmin()?viewUsuario(r.id):viewRestritoUsr();break;
+    case 'usuario-form':h=isAdmin()?viewUsuarioForm(r.id):viewRestritoUsr();break;
+    case 'repds':h=viewRepresentadas();break;
+    case 'repd':h=viewRepresentada(r.id);break;
+    case 'repd-form':h=viewRepresentadaForm(r.id);break;
+    case 'materiais':h=viewMateriais();break;
+    case 'mat':h=viewMaterial(r.id);break;
+    case 'mat-form':h=viewMaterialForm(r.id);break;
+    case 'painel':h=viewPainel();break;
+    case 'entregas':h=isAdmin()?viewRestrito('Entregas são gerenciadas pelo Representante (RF11).'):viewEntregas();break;
+    case 'ent-form':h=isAdmin()?viewRestrito('Entregas são gerenciadas pelo Representante (RF11).'):viewEntForm(r.kind,r.id);break;
+    case 'orc-dec':h=viewOrcDecisao(r.id,r.tipo);break;
+    case 'orc-form':h=isAdmin()?viewRestrito():viewOrcForm(r.kind,r.id);break;
+    default:h=viewClientes();
+  }
+  mount(h);
+}
+
+/* ========== eventos ========== */
+function syncTipo(form){
+  var pf=form.querySelector('input[name="tipo"]:checked').value==='pf';
+  $('#lbl-nome').textContent=pf?'Nome completo':'Razão social';
+  $('#lbl-doc').textContent=pf?'CPF':'CNPJ';
+  $('#hint-doc').textContent=pf?'Ex.: 000.000.000-00':'Ex.: 00.000.000/0000-00';
+  var d=$('#f-doc');d.value=pf?maskCPF(d.value):maskCNPJ(d.value);
+}
+function confirmInativar(tipo,id){
+  var isC=tipo==='cli',item=isC?cli(id):obra(id);
+  var extra=isC?(obrasDe(id).filter(function(o){return o.ativo;}).length?'<p>Este cliente tem '+obrasDe(id).filter(function(o){return o.ativo;}).length+' obra(s) ativa(s); elas continuam cadastradas.</p>':''):'';
+  openModal({title:(isC?'Inativar cliente?':'Inativar obra?'),
+    body:'<p><b>'+esc(item.nome)+'</b> deixa de aparecer nas listas de '+(isC?'ativos':'ativas')+'. O histórico de '+(isC?'obras, ':'')+'orçamentos e entregas é mantido e você pode reativar depois.</p>'+extra,
+    ok:'Inativar',onOk:function(){item.ativo=false;toast((isC?'Cliente':'Obra')+' inativ'+(isC?'ado':'ada')+' com sucesso');render();}});
+}
+function confirmEliminar(tipo,id){
+  var isC=tipo==='cli',item=isC?cli(id):obra(id).comprador,alvo=isC?cli(id).nome:obra(id).comprador.nome;
+  var quais=isC?(item.tipo==='pf'?'nome, CPF, telefone e e-mail':'nome, telefone e e-mail'):'nome, telefone e e-mail';
+  openModal({title:'Eliminar dados pessoais?',tone:'danger',
+    body:'<p>Titular: <b>'+esc(alvo)+'</b></p><ul><li>Serão eliminados: '+quais+'.</li><li>Obras, orçamentos e entregas continuam registrados, de forma anonimizada.</li><li>A ação não pode ser desfeita e fica no log de auditoria, com data, hora e usuário.</li></ul>',
+    check:'Confirmo que o titular solicitou a eliminação dos dados (Lei 13.709/2018, art. 18).',ok:'Eliminar dados',
+    onOk:function(){
+      if(isC){item.nome='Titular anonimizado #'+item.id;item.doc='—';item.tel='—';item.email='';item.eliminado=hoje();}
+      else{item.nome='';item.tel='';item.email='';item.eliminado=hoje();}
+      toast('Dados pessoais eliminados com sucesso');render();}});
+}
+
+document.addEventListener('click',function(ev){
+  var t=ev.target.closest('[data-action]');if(!t)return;
+  var a=t.getAttribute('data-action'),id=+t.getAttribute('data-id'),v=t.getAttribute('data-v');
+  switch(a){
+    case 'soon':toast(t.getAttribute('data-label')+' entra nos próximos lotes de telas');break;
+    case 'logout':state.logged=false;location.hash='login';break;
+    case 'forgot':toast('Recuperar senha (RF04) será desenhada em outro lote');break;
+    case 'toggle-pass':var i=$('#l-senha'),show=i.type==='password';i.type=show?'text':'password';t.textContent=show?'Ocultar':'Mostrar';t.setAttribute('aria-pressed',String(show));break;
+    case 'perfil':if(state.perfil!==v){state.perfil=v;if(v==='cliente')go('orcamentos');else render();}break;
+    case 'notifs':abrirNotifs();break;
+    case 'drawer-open':$('#shell').classList.add('drawer-open');t.setAttribute('aria-expanded','true');break;
+    case 'drawer-close':$('#shell').classList.remove('drawer-open');break;
+    case 'seg-cli':state.fc.status=v;refreshCli();break;
+    case 'seg-obra':state.fo.status=v;refreshObra();break;
+    case 'limpar-cli':state.fc={q:'',tipo:'todos',status:'todos'};render();break;
+    case 'limpar-obra':state.fo={q:'',fase:'todas',status:'todas'};render();break;
+    case 'inativar-cli':confirmInativar('cli',id);break;
+    case 'reativar-cli':cli(id).ativo=true;toast('Cliente reativado com sucesso');render();break;
+    case 'eliminar-cli':confirmEliminar('cli',id);break;
+    case 'inativar-obra':confirmInativar('obra',id);break;
+    case 'reativar-obra':obra(id).ativo=true;toast('Obra reativada com sucesso');render();break;
+    case 'eliminar-comp':confirmEliminar('comp',id);break;
+    case 'seg-repd':state.frp.status=v;refreshRepd();break;
+    case 'limpar-repd':state.frp={q:'',status:'todas'};render();break;
+    case 'inativar-repd':confirmInativarRepd(id);break;
+    case 'reativar-repd':repr(id).ativa=true;toast('Representada reativada com sucesso');render();break;
+    case 'ver-mats':state.fm={q:'',rep:String(id),status:'todos'};go('materiais');break;
+    case 'novo-mat-rep':state.prefillRep=id;go('material-novo');break;
+    case 'seg-mat':state.fm.status=v;refreshMat();break;
+    case 'limpar-mat':state.fm={q:'',rep:'todas',status:'todos'};render();break;
+    case 'inativar-mat':confirmInativarMat(id);break;
+    case 'reativar-mat':mat(id).ativo=true;toast('Material reativado com sucesso');render();break;
+    case 'seg-usr':state.fu.status=v;refreshUsr();break;
+    case 'limpar-usr':state.fu={q:'',perfil:'todos',status:'todos'};render();break;
+    case 'inativar-usr':confirmInativarUsr(id);break;
+    case 'reativar-usr':usr(id).ativo=true;toast('Usuário reativado com sucesso');render();break;
+    case 'seg-ent':state.fe.status=v;refreshEnt();break;
+    case 'limpar-ent':state.fe={q:'',status:'todos'};render();break;
+    case 'seg-pnl':state.fp.tipo=v;refreshPainel();break;
+    case 'seg-orc':state.fq.status=v;refreshOrc();break;
+    case 'limpar-orc':state.fq={q:'',status:'todos',rep:'todas'};render();break;
+    case 'novo-orc-obra':state.prefillObra=id;go('orcamento-novo');break;
+    case 'add-item':state.draft.itens.push({mid:'',qtd:1,preco:0});refreshItens(true);break;
+    case 'rm-item':state.draft.itens.splice(+t.getAttribute('data-ix'),1);refreshItens();var ab=$('[data-action="add-item"]');if(ab)ab.focus();break;
+    case 'nova-obra-cli':state.prefillCliente=id;go('obra-nova');break;
+    case 'modal-cancel':closeModal();break;
+    case 'modal-backdrop':if(ev.target===t)closeModal();break;
+    case 'modal-ok':var fn=modalCtx&&modalCtx.ok;closeModal(true);if(fn)fn();break;
+  }
+  if(t.closest('.sidebar')&&a!=='drawer-open'){var sh=$('#shell');if(sh)sh.classList.remove('drawer-open');}
+});
+document.addEventListener('click',function(ev){
+  var l=ev.target.closest('.sidebar a.nav-i');if(l){var sh=$('#shell');if(sh)sh.classList.remove('drawer-open');}
+});
+function refreshCli(){var el=$('#list-cli');if(!el)return;el.innerHTML=listaClientes();document.querySelectorAll('[data-action="seg-cli"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-v')===state.fc.status));});}
+function refreshOrc(){var el=$('#list-orc');if(!el)return;el.innerHTML=listaOrcs();document.querySelectorAll('[data-action="seg-orc"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-v')===state.fq.status));});}
+function refreshObra(){var el=$('#list-obra');if(!el)return;el.innerHTML=listaObras();document.querySelectorAll('[data-action="seg-obra"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-v')===state.fo.status));});}
+document.addEventListener('input',function(ev){
+  var t=ev.target;
+  if(t.id==='q-cli'){state.fc.q=t.value;refreshCli();}
+  else if(t.id==='q-obra'){state.fo.q=t.value;refreshObra();}
+  else if(t.id==='q-orc'){state.fq.q=t.value;refreshOrc();}
+  else if(t.id==='q-ent'){state.fe.q=t.value;refreshEnt();}
+  else if(t.id==='q-repd'){state.frp.q=t.value;refreshRepd();}
+  else if(t.id==='q-mat'){state.fm.q=t.value;refreshMat();}
+  else if(t.id==='q-usr'){state.fu.q=t.value;refreshUsr();}
+  else if(t.id==='l-email'){state.loginEmail=t.value;}
+  else if(t.id==='o-pag'&&state.draft){state.draft.pag=t.value;clearErrFor(t);}
+  else if(t.getAttribute&&state.draft&&(t.getAttribute('data-f')==='qtd'||t.getAttribute('data-f')==='preco')){clearErrFor(t);onItem(t);}
+  else if(t.getAttribute&&t.getAttribute('data-mask')){
+    var m=t.getAttribute('data-mask');
+    if(m==='tel')t.value=maskTel(t.value);
+    else if(m==='doc'){var f=t.form.querySelector('input[name="tipo"]:checked');t.value=(f&&f.value==='pf')?maskCPF(t.value):maskCNPJ(t.value);}
+  }
+  else if(t.id==='m-check'){$('#m-ok').disabled=!t.checked;}
+});
+document.addEventListener('change',function(ev){
+  var t=ev.target;
+  if(t.id==='tipo-cli'){state.fc.tipo=t.value;refreshCli();}
+  else if(t.id==='fase-obra'){state.fo.fase=t.value;refreshObra();}
+  else if(t.id==='rep-orc'){state.fq.rep=t.value;refreshOrc();}
+  else if(t.id==='rep-mat'){state.fm.rep=t.value;refreshMat();}
+  else if(t.id==='perfil-usr'){state.fu.perfil=t.value;refreshUsr();}
+  else if(t.name==='perfil'&&t.form&&t.form.id==='f-usuario'){var fc=$('#fld-cli');if(fc){if(t.value==='cliente')fc.removeAttribute('hidden');else fc.setAttribute('hidden','');}}
+  else if(t.id==='dias-pnl'){state.fp.dias=+t.value;refreshPainel();}
+  else if(t.id==='rep-pnl'){state.fp.rep=t.value;refreshPainel();}
+  else if(t.id==='o-obra'&&state.draft){state.draft.obraId=t.value;clearErrFor(t);}
+  else if(t.id==='o-rep'&&state.draft){clearErrFor(t);state.draft.repId=t.value;state.draft.itens=t.value?[{mid:'',qtd:1,preco:0}]:[];refreshItens();}
+  else if(t.getAttribute&&state.draft&&t.getAttribute('data-f')==='mid'){
+    var ix=+t.getAttribute('data-ix'),it=state.draft.itens[ix],m=t.value?mat(+t.value):null;
+    clearErrFor(t);it.mid=t.value?+t.value:'';it.preco=m?m.preco:0;refreshItens();var nf=$('#im-'+ix);if(nf)nf.focus();}
+  else if(t.name==='tipo'&&t.form&&t.form.id==='f-cliente'){syncTipo(t.form);}
+  else if(t.name==='lp'){state.loginPerfil=t.value;var pu=state.usuarios.filter(function(x){return x.perfil===t.value&&x.ativo;})[0];if(pu){state.loginEmail=pu.email;var le=$('#l-email');if(le)le.value=pu.email;}}
+  else if(t.id==='m-check'){$('#m-ok').disabled=!t.checked;}
+});
+document.addEventListener('submit',function(ev){
+  var f=ev.target;ev.preventDefault();
+  if(f.id==='f-login'){
+    var em=String($('#l-email').value||'').trim(),lu=usuarioPorEmail(em);state.loginEmail=em;
+    if(lu&&!lu.ativo){state.loginErr='Este usuário está inativo e não pode acessar o sistema. Procure o administrador.';render();var lb=$('#login-err');if(lb)lb.focus();return;}
+    state.loginErr=null;
+    if(lu){state.perfil=lu.perfil;state.loginPerfil=lu.perfil;if(lu.perfil==='cliente')state.clienteId=lu.clienteId;}else state.perfil=state.loginPerfil;
+    state.logged=true;go(state.perfil==='cliente'?'orcamentos':'painel');}
+  else if(f.id==='f-cliente')submitCliente(f);
+  else if(f.id==='f-obra')submitObra(f);
+  else if(f.id==='f-orc')submitOrc();
+  else if(f.id==='f-dec')submitDec(f);
+  else if(f.id==='f-ent')submitEnt(f);
+  else if(f.id==='f-usuario')submitUsuario(f);
+  else if(f.id==='f-material')submitMaterial(f);
+  else if(f.id==='f-representada')submitRepresentada(f);
+});
+document.addEventListener('keydown',function(ev){
+  if(ev.key==='Escape'){
+    if($('#modal-root').firstChild){closeModal();return;}
+    var sh=$('#shell');if(sh&&sh.classList.contains('drawer-open')){sh.classList.remove('drawer-open');var b=$('[data-action="drawer-open"]');if(b){b.setAttribute('aria-expanded','false');b.focus();}}
+  }
+  if(ev.key==='Tab'&&$('#modal-root').firstChild){
+    var els=Array.prototype.slice.call($('#modal-root').querySelectorAll('button:not([disabled]),input,[href]'));
+    if(!els.length)return;var first=els[0],last=els[els.length-1];
+    if(ev.shiftKey&&document.activeElement===first){ev.preventDefault();last.focus();}
+    else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first.focus();}
+  }
+});
+window.addEventListener('hashchange',function(){
+  closeModal(true);state.draft=null;state.decErr=null;state.entErr=null;state.entVal='';if(!/-reprovar$/.test(location.hash))state.decMotivo='';
+  var h=(location.hash||'').replace(/^#/,'');
+  if(h&&h!=='login')state.logged=true;
+  render();window.scrollTo(0,0);
+  var m=$('#main');if(m)m.focus({preventScroll:true});
+});
+
+/* início: sem endereço no link, abre no login; com endereço, abre direto na tela */
+if((location.hash||'').replace(/^#/,'')&&location.hash!=='#login')state.logged=true;
+render();
+})();
+</script>
+
+</body></html>
